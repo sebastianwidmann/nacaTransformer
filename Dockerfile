@@ -1,13 +1,16 @@
-FROM python:3.8
+FROM tensorflow/tensorflow:devel-gpu
+
+# set the working directory in container
+WORKDIR /code
 
 # copy the dependencies file to the working directory
 COPY requirements.txt .
 
-# install requirements
-RUN pip install -r requirements.txt
+# install dependencies
+RUN python -m pip install -r requirements.txt
 
-# copy the content of the local src directory to the working directory
+# copy the content of the local source directory to the working directory
 COPY src/ .
 
-# run container
-CMD [ "python", "./main.py"]
+# execute container
+CMD [ "python3", "./main.py"]
