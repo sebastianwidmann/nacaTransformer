@@ -1,2 +1,14 @@
 airfoilMNIST
 venv
+
+# local directory files for PyCharm
+/.idea/.gitignore
+/.idea/codeStyles/codeStyleConfig.xml
+/.idea/misc.xml
+/.idea/modules.xml
+/.idea/nacaTransformer.iml
+/.idea/other.xml
+/.idea/inspectionProfiles/profiles_settings.xml
+/.idea/codeStyles/Project.xml
+/.idea/inspectionProfiles/Project_Default.xml
+/.idea/vcs.xml
