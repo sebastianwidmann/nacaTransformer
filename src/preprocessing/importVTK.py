@@ -16,13 +16,13 @@ from vtk.util.numpy_support import vtk_to_numpy
 import numpy as np
 
 
-def convert_vtk_to_numpy(directory):
+def convert_vtu_to_numpy(directory):
     """
     Convert datasets from airfoilMNIST in vtk format into numpy arrays
 
     :param:
         directory: str
-            directory to XML file as unstructured grid (.vtu) type
+            directory to XML file as UnstructuredGrid (.vtu) type
     :return:
         numpy_point_data: numpy.ndarray
             average flow field data in the following column format:
@@ -102,4 +102,25 @@ def reduce_size(data, xmin=-1, xmax=5, ymin=-1, ymax=1):
     data = data[ymask]
     return data
 
-# def interpolate_mesh():
+
+def convert_vtp_to_numpy(directory):
+    """
+    Convert wing geometry from airfoilMNIST in vtk format into numpy arrays
+
+    :param:
+        directory: str
+            directory to XML file as PolyData (.vtp) type
+    :return:
+        numpy_point_data: numpy.ndarray
+            coordinate points of wing geometry in the following column
+            format [x y]
+    """
+    reader = vtk.vtkXMLPolyDataReader()
+    reader.SetFileName(directory)
+    reader.Update()
+    vtk_dataset = reader.GetOutput()
+
+    vtk_points = vtk_dataset.GetPoints()
+    numpy_points = vtk_to_numpy(vtk_points.GetData())
+
+    return np.delete(numpy_points[numpy_points[:, 2] < 0.5], -1, axis=1)
