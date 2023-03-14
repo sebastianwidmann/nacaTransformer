@@ -46,8 +46,6 @@ def main(nx, ny, data_dir='../airfoilMNIST',
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
 
-    data_dir = '../nacaTest'
-
     vtu_list = [x for x in sorted(os.listdir(data_dir)) if x.endswith('.vtu')]
     vtp_list = [x for x in sorted(os.listdir(data_dir)) if x.endswith('.vtp')]
 
