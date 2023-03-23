@@ -29,25 +29,27 @@ def _bytes_feature(value):
     return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
 
 
-def create_tfExample(airfoil, aoa, mach, field):
+def create_tfExample(airfoil: str, aoa: float, mach: float, field: tf.Tensor):
     """
     Create example for data sample which will store the necessary information
     about each CFD simulation
 
-    :param:
-        airfoil: str
-            shape of NACA airfoil described using a 4- or 5-digit code
-        angle: float
-            angle of attack of NACA airfoil
-        mach: float
-            freestream mach number
-        data: tensorflow.ndarray
-            flow field data in the following column format:
-            [x y TMean alphatMean kMean nutMean omegaMean pMean rhoMean
-            UxMean UyMean]
-    :return:
-        example: tensorflow.train.Example
-            returns data in the Example format to write into TFRecord
+    Parameters
+    ----------
+    airfoil: str
+             shape of NACA airfoil described using a 4- or 5-digit code
+    aoa: float
+           angle of attack of NACA airfoil
+    mach: float
+          freestream mach number
+    field: tf.Tensor
+          flow field data in the following column format [x y TMean
+          alphatMean kMean nutMean omegaMean pMean rhoMean UxMean UyMean]
+
+    Returns
+    -------
+    example: tensorflow.train.Example
+             returns data in the Example format to write into TFRecord
     """
 
     feature = {
@@ -60,44 +62,47 @@ def create_tfExample(airfoil, aoa, mach, field):
     return tf.train.Example(features=tf.train.Features(feature=feature))
 
 
-def vtk_to_tfTensor(vtu_dir, stl_dir, stl_format, xmin, xmax, ymin, ymax, nx,
-                    ny, k, p, gpu_id):
+def vtk_to_tfTensor(vtu_dir: str, stl_dir: str, stl_format: str, xmin: float,
+                    xmax: float, ymin: float, ymax: float, nx: int, ny: int,
+                    k: int, p: int, gpu_id: int):
     """
     Convert datasets from airfoilMNIST into the TFRecord format (more
     information about TFRecords can be found on
     https://www.tensorflow.org/tutorials/load_data/tfrecord)
 
-    :param:
-        vtu_dir: str
-            raw field data with coordinate locations and field data values
-        stl_dir: str
-            directory to .stl-file of wing geometry
-        stl_format: str
-            definition in which format the .stl-file is provided
-        xmin: int
-            minimum bound upstream of wing geometry
-        xmax: int
-            maximum bound downstream of wing geometry
-        ymin: int
-            minimum bound below of wing geometry
-        ymax: int
-            minimum bound above of wing geometry
-        nx: int
-            number of interpolation points in x1 direction
-        ny: int
-            number of interpolation points in x2 direction
-        k: int
-            number of nearest neighbours
-        p: int
-            power parameter
-        gpu_id: int
-            ID of GPU which shall be used
-    :return:
-        target_data: tensorflow.ndarray
-            query array with interpolated coordinates and field data values
-            in the following column format:
-            [x y TMean alphatMean kMean nutMean omegaMean pMean rhoMean
-            UxMean UyMean]
+    Parameters
+    ----------
+    vtu_dir: str
+             raw field data with coordinate locations and field data values
+    stl_dir: str
+             directory to .stl-file of wing geometry
+    stl_format: str
+                definition in which format the .stl-file is provided
+    xmin: float
+          minimum bound upstream of wing geometry
+    xmax: float
+          maximum bound downstream of wing geometry
+    ymin: float
+          minimum bound below of wing geometry
+    ymax: float
+          minimum bound above of wing geometry
+    nx: int
+        number of interpolation points in x1 direction
+    ny: int
+        number of interpolation points in x2 direction
+    k: int
+       number of nearest neighbours
+    p: int
+       power parameter
+    gpu_id: int
+            ID of GPU
+
+    Returns
+    -------
+    target_data: tensorflow.ndarray
+                 query array with interpolated coordinates and field data
+                 values in the following column format: [x y TMean alphatMean
+                 kMean nutMean omegaMean pMean rhoMean UxMean UyMean sdf]
     """
 
     if stl_format == 'nacaFOAM':
@@ -135,18 +140,21 @@ def vtk_to_tfTensor(vtu_dir, stl_dir, stl_format, xmin, xmax, ymin, ymax, nx,
     return tf.convert_to_tensor(int_data, dtype=tf.float32)
 
 
-def vtu_to_numpy(vtu_dir):
+def vtu_to_numpy(vtu_dir: str):
     """
     Convert datasets from airfoilMNIST in vtk format into numpy arrays
 
-    :param:
-        vtu_dir: str
-            directory to XML file as UnstructuredGrid (.vtu) type
-    :return:
-        numpy_point_data: numpy.ndarray
-            average flow field data in the following column format:
-            [x y TMean alphatMean kMean nutMean omegaMean pMean rhoMean
-            UxMean UyMean]
+    Parameters
+    ----------
+    vtu_dir: str
+             directory to XML file as UnstructuredGrid (.vtu) type
+
+    Returns
+    -------
+    numpy_point_data: numpy.ndarray
+                      average flow field data in the following column format:
+                      [x y TMean alphatMean kMean nutMean omegaMean pMean
+                      rhoMean UxMean UyMean]
     """
 
     reader = vtk.vtkXMLUnstructuredGridReader()
@@ -191,25 +199,28 @@ def vtu_to_numpy(vtu_dir):
     return numpy_point_data
 
 
-def reduce_size(data, xmin, xmax, ymin, ymax):
+def reduce_size(data: np.ndarray, xmin: float, xmax: float, ymin: float, ymax):
     """
     Reduce the size of the computational domain from the initial size of
     (xmin=-10, xmax=30, ymin=-10, ymax=10)
 
-    :param:
-        data: numpy.ndarray
-            raw average flow field
-        xmin: int
-            minimum bound upstream of wing geometry
-        xmax: int
-            maximum bound downstream of wing geometry
-        ymin: int
-            minimum bound below of wing geometry
-        ymax: int
-            minimum bound above of wing geometry
-    :return:
-        data: numpy.ndarray
-            average flow field with new bounds
+    Parameters
+    ----------
+    data: numpy.ndarray
+          raw average flow field
+    xmin: float
+          minimum bound upstream of wing geometry
+    xmax: float
+          maximum bound downstream of wing geometry
+    ymin: float
+          minimum bound below of wing geometry
+    ymax: float
+          minimum bound above of wing geometry
+
+    Returns
+    -------
+    data: numpy.ndarray
+          average flow field with new bounds
 
     """
 

@@ -15,56 +15,43 @@ from src.preprocessing.conversion import vtk_to_tfTensor, \
     create_tfExample
 
 
-def generate_tfrecords(data_dir, save_dir, stl_format, nsamples, xmin, xmax,
-                       ymin, ymax, nx, ny, k, p, gpu_id):
+def generate_tfrecords(data_dir: str, save_dir: str, stl_format: str,
+                       nsamples: int, xmin: float, xmax: float, ymin: float,
+                       ymax: float, nx: int, ny: int, k: int, p: int,
+                       gpu_id: int):
     """
     Convert vtk datasets from airfoilMNIST into the TFRecord format and save
-    them as into the TFRecords directory (more
-    information about TFRecords can be found on
-    https://www.tensorflow.org/tutorials/load_data/tfrecord)
+    them as into the TFRecords directory (more information about TFRecords
+    can be found on https://www.tensorflow.org/tutorials/load_data/tfrecord)
 
-    :param:
-        data_dir: str
-            input directory of vtk files
-        save_dir: str
-            output directory of TFRecord files
-        stl_format: str
-            data format of .stl-file formats
-        nsamples: int, optional
-            number of samples per .tfrecord file
-        xmin: int
-            minimum bound upstream of wing geometry
-        xmax: int
-            maximum bound downstream of wing geometry
-        ymin: int
-            minimum bound below of wing geometry
-        ymax: int
-            minimum bound above of wing geometry
-        nx: int
-            number of interpolation points in x1 direction
-        ny: int
-            number of interpolation points in x2 direction
-        k: int
-            number of nearest neighbours
-        p: int
-            power parameter
-        gpu_id: int
-            ID of GPU which shall be used
-    :return:
-        airfoilMNIST_i.tfrecord: tfrecord
-            return simple format for storing a sequence of binary records.
-
-            :features:
-                airfoil: str
-                    shape of NACA airfoil described using a 4- or 5-digit code
-                angle: float
-                    angle of attack of NACA airfoil
-                mach: float
-                    freestream mach number
-                data: tensorflow.ndarray
-                    flow field data in the following column format:
-                    [x y TMean alphatMean kMean nutMean omegaMean pMean rhoMean
-                    UxMean UyMean]
+    Parameters
+    ----------
+    data_dir : str
+               input directory of vtk files
+    save_dir : str
+               output directory of TFRecord files
+    stl_format : str
+                 data format of .stl-file formats
+    nsamples : int
+               number of samples per .tfrecord file
+    xmin : int
+           minimum bound upstream of wing geometry
+    xmax : int
+           maximum bound downstream of wing geometry
+    ymin : int
+           minimum bound below of wing geometry
+    ymax : int
+           minimum bound above of wing geometry
+    nx : int
+         number of interpolation points in x direction
+    ny : int
+         number of interpolation points in y direction
+    k : int
+        number of nearest neighbours
+    p : int
+        power parameter
+    gpu_id : int
+             ID of GPU
     """
 
     # check data_format type
