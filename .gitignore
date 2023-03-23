@@ -1,4 +1,5 @@
 airfoilMNIST
+airfoilMNIST_TFRecords
 venv
 
 # local directory files for PyCharm
