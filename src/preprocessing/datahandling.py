@@ -54,19 +54,12 @@ def generate_tfrecords(data_dir: str, save_dir: str, stl_format: str,
              ID of GPU
     """
 
-    # check data_format type
-    format_types = ['nacaFOAM', 'Selig', 'Lednicer']
-    if stl_format not in format_types:
-        raise ValueError('Invalid format. Expected one of: %s' % format_types)
-
-    # check if argum
-
     # check if output directory exists and create dir if necessary
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
 
     vtu_list = [x for x in sorted(os.listdir(data_dir)) if x.endswith('.vtu')]
-    stl_list = [x for x in sorted(os.listdir(data_dir)) if x.endswith('.stl')]
+    stl_list = [("_".join(x.split("_", 2)[:2]) + ".stl") for x in vtu_list]
 
     dataset = list(zip(vtu_list, stl_list))
 
