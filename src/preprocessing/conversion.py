@@ -105,6 +105,14 @@ def vtk_to_tfTensor(vtu_dir: str, stl_dir: str, stl_format: str, xmin: float,
                  kMean nutMean omegaMean pMean rhoMean UxMean UyMean sdf]
     """
 
+    # TODO add implementation for Selig and Lednicer
+
+    # check data_format type
+    format_types = ['nacaFOAM']
+    # format_types = ['nacaFOAM', 'Selig', 'Lednicer']
+    if stl_format not in format_types:
+        raise ValueError('Invalid format. Expected one of: %s' % format_types)
+
     if stl_format == 'nacaFOAM':
         """
         For any NACA .stl-file written with nacaFOAM, the points are read
@@ -126,7 +134,7 @@ def vtk_to_tfTensor(vtu_dir: str, stl_dir: str, stl_format: str, xmin: float,
         raw_geom = raw_geom[raw_geom[:, 2] > 0][:, 0:2]
 
         # find index where points of side surface end
-        id = np.where(raw_geom == 0.75)[0][-1]
+        id = np.where(raw_geom == np.max(raw_geom[:, 0]))[0][-1]
 
         # remove redundant points from .stl-file type
         raw_geom = raw_geom[: id + 1, :]
