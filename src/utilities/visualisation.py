@@ -9,7 +9,8 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 import numpy as np
 
 
-def plot_field(data, field, filename, xmin, xmax, ymin, ymax, nx, ny):
+def plot_field(data, field, filename, xmin, xmax, ymin, ymax, nx, ny,
+               savefig=False):
     x, y = np.mgrid[xmin:xmax:(nx * 1j), ymin:ymax:(ny * 1j)]
 
     field_idx_list = {'T': 2, 'alphaT': 3, 'k': 4, 'nut': 5, 'omega': 6,
@@ -49,4 +50,8 @@ def plot_field(data, field, filename, xmin, xmax, ymin, ymax, nx, ny):
                  ticks=np.linspace(min_val, max_val, 10, endpoint=True))
 
     plt.tight_layout()
-    plt.savefig('../output/{}.png'.format(filename), dpi=300)
+
+    plt.show()
+
+    if savefig:
+        plt.savefig('../output/{}.png'.format(filename), dpi=300)
