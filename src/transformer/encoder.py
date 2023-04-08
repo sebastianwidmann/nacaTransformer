@@ -7,39 +7,68 @@
 # version ='1.0'
 # ---------------------------------------------------------------------------
 
-import tensorflow as tf
+from flax import linen as nn
 
-# from src.transformer.positional_encoding import PositionalEmbedding
 from src.transformer.encoder_layer import EncoderLayer
 
 
-class Encoder(tf.keras.layers.Layer):
-    def __init__(self, *, num_layers, d_model, num_heads,
-                 dff, vocab_size, dropout_rate=0.1):
-        super().__init__()
+class Encoder(nn.Module):
+    """ Transformer encoder.
 
-        self.d_model = d_model
-        self.num_layers = num_layers
+    Attributes
+    ----------
+    num_layers: int
+        number of layers
+    pos_embedding: bool = True
+        Add learned positional embeddings to the inputs
+    num_heads: int
+        number of heads in nn.MultiHeadDotProductAttention
+    dim_model: int
+        dimensionality of embeddings
+    dim_mlp: int
+        dimensionality of multilayer perceptron layer
+    dropout_rate: float
+        Dropout rate. Float between 0 and 1.
+    att_dropout_rate: float
+        Dropout rate of attention layer. Float between 0 and 1.
+    """
 
-        self.pos_embedding = PositionalEmbedding(
-            vocab_size=vocab_size, d_model=d_model)
+    num_layers: int
+    pos_embedding: bool = True
+    num_heads: int
+    dim_model: int
+    dim_mlp: int
+    dropout_rate: float = 0.1
+    att_dropout_rate: float = 0.1
 
-        self.enc_layers = [
-            EncoderLayer(d_model=d_model,
-                         num_heads=num_heads,
-                         dff=dff,
-                         dropout_rate=dropout_rate)
-            for _ in range(num_layers)]
-        self.dropout = tf.keras.layers.Dropout(dropout_rate)
+    @nn.compact
+    def __call__(self, x, train):
+        """ Applies transformer model on the inputs.
 
-    def call(self, x):
-        # `x` is token-IDs shape: (batch, seq_len)
-        x = self.pos_embedding(x)  # Shape `(batch_size, seq_len, d_model)`.
+        Parameters
+        ----------
+        x: TODO: add dtype
+            Inputs of encoder layer.
+        train: bool
+            Set to 'True' when training.
 
-        # Add dropout.
-        x = self.dropout(x)
+        Returns
+        -------
+        Output of transformer encoder.
 
-        for i in range(self.num_layers):
-            x = self.enc_layers[i](x)
+        """
 
-        return x  # Shape `(batch_size, seq_len, d_model)`.
+        # TODO: add positional embedding call
+
+        for lyr in range(self.num_layers):
+            x = EncoderLayer(
+                num_heads=self.num_heads,
+                dim_model=self.dim_model,
+                dim_mlp=self.dim_mlp,
+                dropout_rate=self.dropout_rate,
+                att_dropout_rate=self.att_dropout_rate,
+            )(x, deterministic=not train)
+
+        encoder = nn.LayerNorm(name='encoder_norm')(x)
+
+        return encoder

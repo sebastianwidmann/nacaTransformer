@@ -7,39 +7,74 @@
 # version ='1.0'
 # ---------------------------------------------------------------------------
 
-import tensorflow as tf
+from flax import linen as nn
 
-from src.transformer.layers import CausalSelfAttention, CrossAttention, \
-    FeedForward
+from src.transformer.layers import MultiLayerPerceptron
 
 
-class DecoderLayer(tf.keras.layers.Layer):
-    def __init__(self,
-                 *,
-                 d_model,
-                 num_heads,
-                 dff,
-                 dropout_rate=0.1):
-        super(DecoderLayer, self).__init__()
+class DecoderLayer(nn.Module):
+    """
+    Transformer decoder layer
 
-        self.causal_self_attention = CausalSelfAttention(
-            num_heads=num_heads,
-            key_dim=d_model,
-            dropout=dropout_rate)
+    Attributes
+    ----------
+    num_heads: int
+        number of heads in nn.MultiHeadDotProductAttention
+    dim_model: int
+        dimensionality of embeddings
+    dim_mlp: int
+        dimensionality of multilayer perceptron layer
+    dropout_rate: float
+        Dropout rate. Float between 0 and 1.
+    att_dropout_rate: float
+        Dropout rate of attention layer. Float between 0 and 1.
+    """
+    num_heads: int
+    dim_model: int
+    dim_mlp: int
+    dropout_rate: float = 0.1
+    att_dropout_rate: float = 0.1
 
-        self.cross_attention = CrossAttention(
-            num_heads=num_heads,
-            key_dim=d_model,
-            dropout=dropout_rate)
+    @nn.compact
+    def __call__(self, input_decoder, input_encoder, deterministic):
+        """
 
-        self.ffn = FeedForward(d_model, dff)
+        Parameters
+        ----------
+        input_decoder:
+        input_encoder:
+        deterministic: bool
+            If false, the attention weight is masked randomly using dropout,
+            whereas if true, the attention weights are deterministic.
 
-    def call(self, x, context):
-        x = self.causal_self_attention(x=x)
-        x = self.cross_attention(x=x, context=context)
+        Returns
+        -------
+        TODO: add dtype
+            Output of encoder layer.
+        """
 
-        # Cache the last attention scores for plotting later
-        self.last_attn_scores = self.cross_attention.last_attn_scores
+        # Block 1: Norm, Masked Multi-Head Attention, Add
+        x = nn.LayerNorm()(input_decoder)
+        x = nn.MultiHeadDotProductAttention(
+            num_heads=self.num_heads,
+            dropout_rate=self.att_dropout_rate,
+        )(x, x, mask=nn.make_causal_mask(x), deterministic=deterministic)
+        x = x + input_decoder
 
-        x = self.ffn(x)  # Shape `(batch_size, seq_len, d_model)`.
-        return x
+        # Block 2: Norm, Multi-Head Attention of Encoder and Decoder, Add
+        y = nn.LayerNorm()(x)
+        y = nn.MultiHeadDotProductAttention(
+            num_heads=self.num_heads,
+            dropout_rate=self.att_dropout_rate,
+        )(y, input_encoder, deterministic=deterministic)
+        y = x + y
+
+        # Block 3: Norm, Multilayer Perceptron, Add
+        z = nn.LayerNorm()(y)
+        z = MultiLayerPerceptron(
+            dim_model=self.dim_model,
+            dim_mlp=self.dim_mlp,
+            dropout_rate=self.dropout_rate,
+        )(z, deterministic=deterministic)
+
+        return y + z

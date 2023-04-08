@@ -7,68 +7,49 @@
 # version ='1.0'
 # ---------------------------------------------------------------------------
 
-import tensorflow as tf
+import flax.linen as nn
 
 
-class BaseAttention(tf.keras.layers.Layer):
-    def __init__(self, **kwargs):
-        self.mha = tf.keras.layers.MultiHeadAttention(**kwargs)
-        self.layer_norm = tf.keras.layers.LayerNormalization()
-        self.add = tf.keras.layers.Add()
+class MultiLayerPerceptron(nn.Module):
+    """
+    Multilayer perceptron layer
 
+    Attributes
+    ----------
+    dim_model: int
+        dimensionality of embeddings
+    dim_mlp: int
+        dimensionality of multilayer perceptron layer
+    dropout_rate: float
+        Dropout rate. Float between 0 and 1.
+    """
 
-class CrossAttention(BaseAttention):
-    def call(self, x, context):
-        attn_output, attn_scores = self.mha(
-            query=x,
-            key=context,
-            value=context,
-            return_attention_scores=True)
+    dim_model: int
+    dim_mlp: int
+    dropout_rate: float = 0.1
 
-        # Cache the attention scores for plotting later.
-        self.last_attn_scores = attn_scores
+    @nn.compact
+    def __call__(self, input_mlp, deterministic):
+        """
+        Applies MLP layer on the inputs.
 
-        x = self.add([x, attn_output])
-        x = self.layernorm(x)
+        Parameters
+        ----------
+        input_mlp: TODO: add dtype
+            TODO: Add description
+        deterministic: bool
+            If false, the attention weight is masked randomly using dropout,
+            whereas if true, the attention weights are deterministic.
 
-        return x
+        Returns
+        -------
+        TODO: add dtype
+            Output of MLP layer.
+        """
 
-
-class GlobalSelfAttention(BaseAttention):
-    def call(self, x):
-        attn_output = self.mha(
-            query=x,
-            value=x,
-            key=x)
-        x = self.add([x, attn_output])
-        x = self.layernorm(x)
-        return x
-
-
-class CausalSelfAttention(BaseAttention):
-    def call(self, x):
-        attn_output = self.mha(
-            query=x,
-            value=x,
-            key=x,
-            use_causal_mask=True)
-        x = self.add([x, attn_output])
-        x = self.layernorm(x)
-        return x
-
-
-class FeedForward(tf.keras.layers.Layer):
-    def __init__(self, d_model, dff, dropout_rate=0.1):
-        super().__init__()
-        self.seq = tf.keras.Sequential([
-            tf.keras.layers.Dense(dff, activation='relu'),
-            tf.keras.layers.Dense(d_model),
-            tf.keras.layers.Dropout(dropout_rate)
-        ])
-        self.add = tf.keras.layers.Add()
-        self.layer_norm = tf.keras.layers.LayerNormalization()
-
-    def call(self, x):
-        x = self.add([x, self.seq(x)])
-        x = self.layer_norm(x)
+        x = nn.Dense(features=self.d_mlp)(input_mlp)
+        x = nn.gelu(x)
+        x = nn.Dropout(rate=self.dropout_rate, deterministic=deterministic)(x)
+        x = nn.Dense(features=self.d_model)(x)
+        x = nn.Dropout(rate=self.dropout_rate, deterministic=deterministic)(x)
         return x
