@@ -14,34 +14,16 @@
 from os.path import exists
 from sys import exit
 from configparser import ConfigParser
+import tensorflow as tf
 
-# import modules from src
-from src.utilities.configuration import generate_config_file
-from src.preprocessing.datahandling import generate_tfrecords
+# Hide any GPUs from Tensorflow. Otherwise, TF might reserve memory and block
+# it for JAX
+tf.config.experimental.set_visible_devices([], 'GPU')
 
-# Restore configuration file with default values if file doesn't exist
-if not exists('config.ini'):
-    generate_config_file()
-    exit("Restored config.ini with default values")
 
-# Read configuration file
-config = ConfigParser()
-config.read("config.ini")
+def main():
+    return True
 
-data_dir = config["preprocessing"]["input_directory"]
-save_dir = config["preprocessing"]["output_directory"]
-stl_format = config["preprocessing"]["stl_format"]
-nsamples = int(config["preprocessing"]["nsamples"])
-xmin = float(config["preprocessing"]["xmin"])
-xmax = float(config["preprocessing"]["xmax"])
-ymin = float(config["preprocessing"]["ymin"])
-ymax = float(config["preprocessing"]["ymax"])
-nx = int(config["preprocessing"]["nx"])
-ny = int(config["preprocessing"]["ny"])
-k = int(config["preprocessing"]["k"])
-p = int(config["preprocessing"]["p"])
-gpu_id = int(config["preprocessing"]["gpu_id"])
 
-# Convert airfoilMNIST dataset to TFRecords
-generate_tfrecords(data_dir, save_dir, stl_format, nsamples, xmin, xmax,
-                   ymin, ymax, nx, ny, k, p, gpu_id)
+if __name__ == '__main__':
+    main()
