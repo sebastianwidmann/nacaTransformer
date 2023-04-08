@@ -8,11 +8,11 @@
 from stl import mesh
 import numpy as np
 import tensorflow as tf
+from ml_collections import ConfigDict
 import vtk
 from vtk.util.numpy_support import vtk_to_numpy
 
-# import modules from src
-from src.preprocessing.interpolation import interpolate
+from interpolation import interpolate
 
 
 def _float_feature(value):
@@ -62,9 +62,7 @@ def create_tfExample(airfoil: str, aoa: float, mach: float, field: tf.Tensor):
     return tf.train.Example(features=tf.train.Features(feature=feature))
 
 
-def vtk_to_tfTensor(vtu_dir: str, stl_dir: str, stl_format: str, xmin: float,
-                    xmax: float, ymin: float, ymax: float, nx: int, ny: int,
-                    k: int, p: int, gpu_id: int):
+def vtk_to_tfTensor(vtu_dir: str, stl_dir: str, config: ConfigDict):
     """
     Convert datasets from airfoilMNIST into the TFRecord format (more
     information about TFRecords can be found on
@@ -76,26 +74,8 @@ def vtk_to_tfTensor(vtu_dir: str, stl_dir: str, stl_format: str, xmin: float,
              raw field data with coordinate locations and field data values
     stl_dir: str
              directory to .stl-file of wing geometry
-    stl_format: str
-                definition in which format the .stl-file is provided
-    xmin: float
-          minimum bound upstream of wing geometry
-    xmax: float
-          maximum bound downstream of wing geometry
-    ymin: float
-          minimum bound below of wing geometry
-    ymax: float
-          minimum bound above of wing geometry
-    nx: int
-        number of interpolation points in x1 direction
-    ny: int
-        number of interpolation points in x2 direction
-    k: int
-       number of nearest neighbours
-    p: int
-       power parameter
-    gpu_id: int
-            ID of GPU
+    config: ConfigDict
+            configuration parameters for kNN and interpolation
 
     Returns
     -------
@@ -110,10 +90,10 @@ def vtk_to_tfTensor(vtu_dir: str, stl_dir: str, stl_format: str, xmin: float,
     # check data_format type
     format_types = ['nacaFOAM']
     # format_types = ['nacaFOAM', 'Selig', 'Lednicer']
-    if stl_format not in format_types:
+    if config.stlformat not in format_types:
         raise ValueError('Invalid format. Expected one of: %s' % format_types)
 
-    if stl_format == 'nacaFOAM':
+    if config.stlformat == 'nacaFOAM':
         """
         For any NACA .stl-file written with nacaFOAM, the points are read
         into arrays in the order such the side surface at z=1 is written
@@ -140,10 +120,11 @@ def vtk_to_tfTensor(vtu_dir: str, stl_dir: str, stl_format: str, xmin: float,
         raw_geom = raw_geom[: id + 1, :]
 
     raw_data = vtu_to_numpy(vtu_dir)
-    raw_data = reduce_size(raw_data, xmin, xmax, ymin, ymax)
+    raw_data = resize(raw_data, *config.resize)
 
-    int_data = interpolate(raw_data, raw_geom, xmin, xmax, ymin, ymax, nx,
-                           ny, k, p, gpu_id)
+    int_data = interpolate(raw_data, raw_geom, *config.resize,
+                           *config.resolution, config.num_neighbors, 2,
+                           config.gpu_id)
 
     return tf.convert_to_tensor(int_data, dtype=tf.float32)
 
@@ -207,7 +188,7 @@ def vtu_to_numpy(vtu_dir: str):
     return numpy_point_data
 
 
-def reduce_size(data: np.ndarray, xmin: float, xmax: float, ymin: float, ymax):
+def resize(data: np.ndarray, xmin: float, xmax: float, ymin: float, ymax):
     """
     Reduce the size of the computational domain from the initial size of
     (xmin=-10, xmax=30, ymin=-10, ymax=10)
