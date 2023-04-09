@@ -8,6 +8,7 @@
 # ---------------------------------------------------------------------------
 
 import flax.linen as nn
+from typing import Optional
 
 
 class MultiLayerPerceptron(nn.Module):
@@ -24,7 +25,7 @@ class MultiLayerPerceptron(nn.Module):
         Dropout rate. Float between 0 and 1.
     """
 
-    dim_model: int
+    dim_model: Optional[int] = None
     dim_mlp: int
     dropout_rate: float = 0.1
 
@@ -46,10 +47,12 @@ class MultiLayerPerceptron(nn.Module):
         TODO: add dtype
             Output of MLP layer.
         """
+        dim_model = input_mlp.shape[-1] if self.dim_model is None else \
+            self.dim_model
 
-        x = nn.Dense(features=self.d_mlp)(input_mlp)
+        x = nn.Dense(features=self.dim_mlp)(input_mlp)
         x = nn.gelu(x)
         x = nn.Dropout(rate=self.dropout_rate, deterministic=deterministic)(x)
-        x = nn.Dense(features=self.d_model)(x)
+        x = nn.Dense(features=dim_model)(x)
         x = nn.Dropout(rate=self.dropout_rate, deterministic=deterministic)(x)
         return x
