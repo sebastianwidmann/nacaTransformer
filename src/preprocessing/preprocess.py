@@ -4,6 +4,7 @@ from ml_collections import config_flags
 import os
 import random
 import tensorflow as tf
+from tqdm import tqdm
 
 from conversion import vtk_to_tfTensor, create_tfExample
 
@@ -11,7 +12,7 @@ from conversion import vtk_to_tfTensor, create_tfExample
 
 FLAGS = flags.FLAGS
 
-_CONFIG = config_flags.DEFINE_config_file('config')
+config_flags.DEFINE_config_file('config')
 
 
 def main(argv):
@@ -39,7 +40,7 @@ def main(argv):
     quotient, remainder = divmod(len(dataset), config.nsamples)
     n_tfrecords = quotient + remainder
 
-    for i in range(n_tfrecords):
+    for i in tqdm(range(n_tfrecords), desc='TFRecords'):
         if remainder != 0 and i == n_tfrecords - 1:
             samples = [dataset.pop(random.randrange(len(dataset))) for _ in
                        range(remainder)]
