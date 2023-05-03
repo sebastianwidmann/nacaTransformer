@@ -15,21 +15,7 @@ from vtk.util.numpy_support import vtk_to_numpy
 from interpolation import interpolate
 
 
-def _float_feature(value):
-    return tf.train.Feature(float_list=tf.train.FloatList(value=[value]))
-
-
-def _int64_feature(value):
-    return tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))
-
-
-def _bytes_feature(value):
-    if isinstance(value, type(tf.constant(0))):
-        value = value.numpy()
-    return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
-
-
-def create_tfExample(airfoil: str, aoa: float, mach: float, field: tf.Tensor):
+def create_tfExample(airfoil: str, aoa: float, mach: float, field: np.ndarray):
     """
     Create example for data sample which will store the necessary information
     about each CFD simulation
@@ -42,7 +28,7 @@ def create_tfExample(airfoil: str, aoa: float, mach: float, field: tf.Tensor):
            angle of attack of NACA airfoil
     mach: float
           freestream mach number
-    field: tf.Tensor
+    field: np.ndarray
           flow field data in the following column format [x y TMean
           alphatMean kMean nutMean omegaMean pMean rhoMean UxMean UyMean]
 
@@ -53,10 +39,14 @@ def create_tfExample(airfoil: str, aoa: float, mach: float, field: tf.Tensor):
     """
 
     feature = {
-        'airfoil': _bytes_feature(airfoil.encode('UTF-8')),
-        'angle': _float_feature(aoa),
-        'mach': _float_feature(mach),
-        'data': _bytes_feature(tf.io.serialize_tensor(field)),
+        'naca': tf.train.Feature(bytes_list=tf.train.BytesList(value=[
+            airfoil.encode('UTF-8')])),
+        'angle': tf.train.Feature(float_list=tf.train.FloatList(value=[
+            aoa])),
+        'mach': tf.train.Feature(float_list=tf.train.FloatList(value=[
+            mach])),
+        'data': tf.train.Feature(float_list=tf.train.FloatList(
+            value=field.flatten()))
     }
 
     return tf.train.Example(features=tf.train.Features(feature=feature))
@@ -79,7 +69,7 @@ def vtk_to_tfTensor(vtu_dir: str, stl_dir: str, config: ConfigDict):
 
     Returns
     -------
-    target_data: tensorflow.ndarray
+    target_data: np.ndarray
                  query array with interpolated coordinates and field data
                  values in the following column format: [x y TMean alphatMean
                  kMean nutMean omegaMean pMean rhoMean UxMean UyMean sdf]
@@ -123,10 +113,12 @@ def vtk_to_tfTensor(vtu_dir: str, stl_dir: str, config: ConfigDict):
     raw_data = resize(raw_data, *config.resize)
 
     int_data = interpolate(raw_data, raw_geom, *config.resize,
-                           *config.resolution, config.num_neighbors, 2,
+                           *config.resolution, config.num_neighbors,
                            config.gpu_id)
 
-    return tf.convert_to_tensor(int_data, dtype=tf.float32)
+    features, width, height = 12, config.resolution[0], config.resolution[1]
+
+    return int_data.transpose().reshape((features, width, height))
 
 
 def vtu_to_numpy(vtu_dir: str):
