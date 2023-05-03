@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # ----------------------------------------------------------------------------
 # Created By  : Sebastian Widmann
 # Institution : TU Munich, Department of Aerospace and Geodesy
@@ -13,8 +11,8 @@ import cuspatial, cudf
 
 
 def interpolate(source_data: np.ndarray, wing_data: np.ndarray, xmin: float,
-                xmax: float, ymin: float, ymax: float, nx: int, ny: int, k: int,
-                p: int, gpu_id: int):
+                xmax: float, ymin: float, ymax: float, nx: int, ny: int,
+                k: int, gpu_id: int, p: int = 2):
     """
     Interpolate from the base mesh onto a new mesh for the given coordinate
     points and field data values
@@ -39,10 +37,10 @@ def interpolate(source_data: np.ndarray, wing_data: np.ndarray, xmin: float,
         number of interpolation points in x2 direction
     k: int
        number of nearest neighbours
-    p: int
-       power parameter
     gpu_id: int
             ID of GPU which shall be used
+    p: int (default = 2)
+       power parameter
 
     Returns
     -------
@@ -110,21 +108,19 @@ def find_knn(xb: np.ndarray, xq: np.ndarray, k: int, gpu_id: int):
 
     """
 
-    nq, d = xq.shape
+    _, d = xq.shape
+
+    xb = np.ascontiguousarray(xb, dtype='float32')
+    xq = np.ascontiguousarray(xq, dtype='float32')
 
     res = faiss.StandardGpuResources()
 
-    flat_config = faiss.GpuIndexFlatConfig()
-    flat_config.device = gpu_id
+    cpu_index = faiss.IndexFlatL2(d)
+    gpu_index = faiss.index_cpu_to_gpu(res, gpu_id, cpu_index)
+    gpu_index.add(xb)
+    distances, neighbors = gpu_index.search(xq, k)
 
-    index = faiss.GpuIndexFlatL2(res, d, flat_config)
-
-    index.train(xb)
-    index.add(xb)
-
-    dist, indexes = index.search(xq, k=k)
-
-    return np.asarray(dist), np.asarray(indexes)
+    return distances, neighbors
 
 
 def find_points_inside(target_points: np.ndarray, wing_points: np.ndarray):
