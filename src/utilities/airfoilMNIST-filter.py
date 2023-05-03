@@ -86,7 +86,7 @@ if __name__ == '__main__':
 
     if args.type == 'vtu':
         restructure_internal(args.source_path, args.target_path)
-    elif args.type == 'froceCoeffs':
+    elif args.type == 'forceCoeffs':
         restructure_forceCoeffs(args.source_path, args.target_path)
     else:
-        print('No valid type given. Possible choices are [vtu, internal]')
+        print('No valid type given. Possible choices are [vtu, forceCoeffs]')
