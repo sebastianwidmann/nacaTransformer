@@ -15,7 +15,7 @@ from vtk.util.numpy_support import vtk_to_numpy
 from interpolation import interpolate
 
 
-def create_tfExample(airfoil: str, aoa: float, mach: float, field: np.ndarray):
+def create_tfExample(x: np.ndarray, y: np.ndarray):
     """
     Create example for data sample which will store the necessary information
     about each CFD simulation
@@ -39,20 +39,17 @@ def create_tfExample(airfoil: str, aoa: float, mach: float, field: np.ndarray):
     """
 
     feature = {
-        'naca': tf.train.Feature(bytes_list=tf.train.BytesList(value=[
-            airfoil.encode('UTF-8')])),
-        'angle': tf.train.Feature(float_list=tf.train.FloatList(value=[
-            aoa])),
-        'mach': tf.train.Feature(float_list=tf.train.FloatList(value=[
-            mach])),
-        'data': tf.train.Feature(float_list=tf.train.FloatList(
-            value=field.flatten()))
+        'data_encoder': tf.train.Feature(float_list=tf.train.FloatList(
+            value=x.flatten())),
+        'data_decoder': tf.train.Feature(float_list=tf.train.FloatList(
+            value=y.flatten())),
     }
 
     return tf.train.Example(features=tf.train.Features(feature=feature))
 
 
-def vtk_to_tfTensor(vtu_dir: str, stl_dir: str, config: ConfigDict):
+def vtk_to_tfTensor(vtu_dir: str, stl_dir: str, config: ConfigDict,
+                    mach: float):
     """
     Convert datasets from airfoilMNIST into the TFRecord format (more
     information about TFRecords can be found on
@@ -74,8 +71,6 @@ def vtk_to_tfTensor(vtu_dir: str, stl_dir: str, config: ConfigDict):
                  values in the following column format: [x y TMean alphatMean
                  kMean nutMean omegaMean pMean rhoMean UxMean UyMean sdf]
     """
-
-    # TODO add implementation for Selig and Lednicer
 
     # check data_format type
     format_types = ['nacaFOAM']
@@ -112,13 +107,17 @@ def vtk_to_tfTensor(vtu_dir: str, stl_dir: str, config: ConfigDict):
     raw_data = vtu_to_numpy(vtu_dir)
     raw_data = resize(raw_data, *config.resize)
 
-    int_data = interpolate(raw_data, raw_geom, *config.resize,
-                           *config.resolution, config.num_neighbors,
-                           config.gpu_id)
+    x, y = interpolate(raw_data, raw_geom, mach, *config.resize,
+                       *config.resolution, config.num_neighbors,
+                       config.gpu_id)
 
-    features, width, height = 12, config.resolution[0], config.resolution[1]
+    w, h = config.resolution[0], config.resolution[1]
+    c_encoder, c_decoder = x.shape[1], y.shape[1]
 
-    return int_data.transpose().reshape((features, width, height))
+    x = x.reshape([w, h, c_encoder])
+    y = y.reshape([w, h, c_decoder])
+
+    return x, y
 
 
 def vtu_to_numpy(vtu_dir: str):
@@ -176,6 +175,9 @@ def vtu_to_numpy(vtu_dir: str):
     numpy_point_data = np.delete(numpy_point_data[numpy_point_data[:, 2] < 0.5],
                                  [2, -1], axis=1)  # remove z-coord and Uz
     # and only return single plane of points
+
+    numpy_point_data = np.delete(numpy_point_data, [2, 3, 4, 5, 6, 8],
+                                 axis=1)  # TODO: REMOVE BEFORE FINAL COMMIT
 
     return numpy_point_data
 
