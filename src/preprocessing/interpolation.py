@@ -10,9 +10,9 @@ import numpy as np
 import cuspatial, cudf
 
 
-def interpolate(source_data: np.ndarray, wing_data: np.ndarray, xmin: float,
-                xmax: float, ymin: float, ymax: float, nx: int, ny: int,
-                k: int, gpu_id: int, p: int = 2):
+def interpolate(source_data: np.ndarray, wing_data: np.ndarray, mach: float,
+                xmin: float, xmax: float, ymin: float, ymax: float, nx: int,
+                ny: int, k: int, gpu_id: int, p: int = 2):
     """
     Interpolate from the base mesh onto a new mesh for the given coordinate
     points and field data values
@@ -77,10 +77,14 @@ def interpolate(source_data: np.ndarray, wing_data: np.ndarray, xmin: float,
     # set values for all fields inside wing geometry to zero
     target_data[wing_points_idx, 2:] = 0
 
-    # add sdf values to the target_data array at the end
-    target_data = np.hstack((target_data, sdf_dist))
+    # split data into arrays for encoder / decoder
+    mach_data = np.copy(sdf_dist)
+    mach_data = np.where(mach == -1, -1, mach)
 
-    return target_data
+    x = np.hstack((sdf_dist, mach_data))
+    y = target_data[:, -3:]
+
+    return x, y
 
 
 def find_knn(xb: np.ndarray, xq: np.ndarray, k: int, gpu_id: int):
