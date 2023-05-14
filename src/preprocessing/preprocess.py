@@ -15,8 +15,6 @@ import numpy as np
 from tqdm import tqdm
 from conversion import vtk_to_tfTensor, create_tfExample
 
-from time import sleep
-
 FLAGS = flags.FLAGS
 config_flags.DEFINE_config_file(
     'config',
@@ -58,93 +56,117 @@ def main(argv):
     test_quotient, test_remainder = divmod(len(ds_test),
                                            config.preprocess.nsamples)
 
-    n_files_train, n_files_test = (train_quotient + 1), \
-        (test_quotient + 1)
+    n_files_train = (train_quotient + 1 if train_remainder != 0 else
+                     train_quotient)
+    n_files_test = (test_quotient + 1 if test_remainder != 0 else test_quotient)
 
-    for i in tqdm(range(n_files_train), desc='Train split', position=0):
-        if train_remainder != 0 and i == n_files_train - 1:
-            batch = [ds_train.pop(random.randrange(len(ds_train))) for _ in
-                     range(train_remainder)]
-        else:
-            batch = [ds_train.pop(random.randrange(len(ds_train))) for _ in
-                     range(config.preprocess.nsamples)]
+    train_shards, test_shards = [], []
 
-        file_dir = os.path.join(config.preprocess.writedir,
-                                'airfoilMNIST-train.tfrecord-{}-of-{}'.format(
-                                    str(i).zfill(5),
-                                    str(n_files_train).zfill(
-                                        5)))
+    with open('errors.txt', 'w') as f:
+        for i in tqdm(range(n_files_train), desc='Train split', position=0):
+            if train_remainder != 0 and i == n_files_train - 1:
+                batch = [ds_train.pop(random.randrange(len(ds_train))) for _ in
+                         range(train_remainder)]
+            else:
+                batch = [ds_train.pop(random.randrange(len(ds_train))) for _ in
+                         range(config.preprocess.nsamples)]
 
-        with tf.io.TFRecordWriter(file_dir) as writer:
-            for sample in tqdm(batch, desc='Shards', position=1,
-                               leave=False):
-                # split string to extract information about airfoil, angle of
-                # attack and Mach number to write as feature into tfrecord
-                sim_config = sample[0].rsplit('.', 1)[0]
-                sim_config = sim_config.split('_')
+            file_dir = os.path.join(config.preprocess.writedir,
+                                    'airfoilMNIST-train.tfrecord-{}-of-{}'.format(
+                                        str(i).zfill(5),
+                                        str(n_files_train).zfill(
+                                            5)))
 
-                airfoil, angle, mach = sim_config
-                angle, mach = float(angle), float(mach)
+            with tf.io.TFRecordWriter(file_dir) as writer:
+                j = 0
+                for sample in tqdm(batch, desc='Shards', position=1,
+                                   leave=False):
+                    # split string to extract information about airfoil, angle of
+                    # attack and Mach number to write as feature into tfrecord
+                    sim_config = sample[0].rsplit('.', 1)[0]
+                    sim_config = sim_config.split('_')
 
-                vtu_dir = os.path.join(vtu_folder, sample[0])
-                stl_dir = os.path.join(stl_folder, sample[1])
-                data = vtk_to_tfTensor(vtu_dir, stl_dir, config.preprocess)
+                    airfoil, angle, mach = sim_config
+                    angle, mach = float(angle), float(mach)
 
-                example = create_tfExample(airfoil, angle, mach, data)
-                writer.write(example.SerializeToString())
+                    vtu_dir = os.path.join(vtu_folder, sample[0])
+                    stl_dir = os.path.join(stl_folder, sample[1])
+                    try:
+                        x, y = vtk_to_tfTensor(vtu_dir, stl_dir,
+                                               config.preprocess, mach)
+                        example = create_tfExample(x, y)
 
-    for i in tqdm(range(n_files_test), desc='Test split', position=0):
-        if train_remainder != 0 and i == n_files_test - 1:
-            batch = [ds_test.pop(random.randrange(len(ds_test))) for _ in
-                     range(test_remainder)]
-        else:
-            batch = [ds_test.pop(random.randrange(len(ds_test))) for _ in
-                     range(config.preprocess.nsamples)]
+                        writer.write(example.SerializeToString())
 
-        file_dir = os.path.join(config.preprocess.writedir,
-                                'airfoilMNIST-test.tfrecord-{}-of-{}'.format(
-                                    str(i).zfill(5),
-                                    str(n_files_test).zfill(
-                                        5)))
+                        j += 1
+                    except ValueError:
+                        print('train, ValueError: ', vtu_dir, file=f)
+                        continue
+                    except AttributeError:
+                        print('train, Attribute error: ', vtu_dir, file=f)
+                        continue
 
-        with tf.io.TFRecordWriter(file_dir) as writer:
-            for sample in tqdm(batch, desc='Shards', position=1,
-                               leave=False):
-                # split string to extract information about airfoil, angle of
-                # attack and Mach number to write as feature into tfrecord
-                sim_config = sample[0].rsplit('.', 1)[0]
-                sim_config = sim_config.split('_')
+            train_shards.append(j)
 
-                airfoil, angle, mach = sim_config
-                angle, mach = float(angle), float(mach)
+        for i in tqdm(range(n_files_test), desc='Test split', position=0):
+            if test_remainder != 0 and i == n_files_test - 1:
+                batch = [ds_test.pop(random.randrange(len(ds_test))) for _ in
+                         range(test_remainder)]
+            else:
+                batch = [ds_test.pop(random.randrange(len(ds_test))) for _ in
+                         range(config.preprocess.nsamples)]
 
-                vtu_dir = os.path.join(vtu_folder, sample[0])
-                stl_dir = os.path.join(stl_folder, sample[1])
-                data = vtk_to_tfTensor(vtu_dir, stl_dir, config.preprocess)
+            file_dir = os.path.join(config.preprocess.writedir,
+                                    'airfoilMNIST-test.tfrecord-{}-of-{}'.format(
+                                        str(i).zfill(5),
+                                        str(n_files_test).zfill(
+                                            5)))
 
-                example = create_tfExample(airfoil, angle, mach, data)
-                writer.write(example.SerializeToString())
+            with tf.io.TFRecordWriter(file_dir) as writer:
+                j = 0
+                for sample in tqdm(batch, desc='Shards', position=1,
+                                   leave=False):
+                    # split string to extract information about airfoil, angle of
+                    # attack and Mach number to write as feature into tfrecord
+                    sim_config = sample[0].rsplit('.', 1)[0]
+                    sim_config = sim_config.split('_')
+
+                    airfoil, angle, mach = sim_config
+                    angle, mach = float(angle), float(mach)
+
+                    vtu_dir = os.path.join(vtu_folder, sample[0])
+                    stl_dir = os.path.join(stl_folder, sample[1])
+
+                    try:
+                        x, y = vtk_to_tfTensor(vtu_dir, stl_dir,
+                                               config.preprocess, mach)
+                        example = create_tfExample(x, y)
+
+                        writer.write(example.SerializeToString())
+
+                        j += 1
+                    except ValueError:
+                        print(vtu_dir, file=f)
+                        continue
+                    except AttributeError:
+                        print(vtu_dir, file=f)
+                        continue
+
+            test_shards.append(j)
+
+    f.close()
 
     # Create metadata files to read dataset with tfds.load(args)
     features = tfds.features.FeaturesDict({
-        'naca': tfds.features.Text(
-            encoder=None,
-            encoder_config=None,
+        'data_encoder': tfds.features.Tensor(
+            shape=(*config.preprocess.resolution, 2),
+            dtype=np.float32,
         ),
-        'angle': np.float32,
-        'mach': np.float32,
-        'data': tfds.features.Tensor(
-            shape=(12, *config.preprocess.resolution),
+        'data_decoder': tfds.features.Tensor(
+            shape=(*config.preprocess.resolution, 3),
             dtype=np.float32,
         ),
     })
-
-    train_shards = [config.preprocess.nsamples for i in range(n_files_train -
-                                                              1)]
-    train_shards.append(train_remainder)
-
-    test_shards = [config.preprocess.nsamples for i in range(n_files_test - 1)]
-    test_shards.append(test_remainder)
 
     split_infos = [
         tfds.core.SplitInfo(
