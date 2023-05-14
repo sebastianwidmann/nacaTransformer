@@ -1,20 +1,16 @@
-FROM tensorflow/tensorflow:latest-gpu
+FROM python:3.11
 
-# set the working directory in container
-WORKDIR /nacatf
-
-# copy the content of the local source directory to the working directory
+# copy contents of src directory to workdir
 COPY requirements.txt .
 COPY src/ .
-COPY airfoilMNIST/ .
-
-RUN apt-get update
-RUN apt-get install -y ffmpeg libsm6 libxext6 libxrender-dev
 
 # install dependencies
-RUN python -m pip install -r requirements.txt
 
-#export PYTHONPATH="${PYTHONPATH}:/src/"
+# install GPU-version of JAX and FLAX
+RUN pip install --upgrade "jax[cuda12_pip]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
+RUN pip install flax
+
+RUN pip install -r requirements.txt
 
 # execute container
-CMD [ "python3", "main.py"]
+CMD ["python3", "main.py"]
