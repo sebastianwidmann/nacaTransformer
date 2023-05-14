@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # ----------------------------------------------------------------------------
 # Created By  : Sebastian Widmann
 # Institution : TU Munich, Department of Aerospace and Geodesy
@@ -13,14 +11,13 @@ from src.transformer.layers import MultiLayerPerceptron
 
 
 class EncoderLayer(nn.Module):
-    """
-    Transformer encoder layer
+    """ Transformer encoder layer.
 
     Attributes
     ----------
     num_heads: int
         number of heads in nn.MultiHeadDotProductAttention
-    dim_model: int
+    hidden_size: int
         dimensionality of embeddings
     dim_mlp: int
         dimensionality of multilayer perceptron layer
@@ -31,13 +28,13 @@ class EncoderLayer(nn.Module):
     """
 
     num_heads: int
-    dim_model: int
+    hidden_size: int
     dim_mlp: int
     dropout_rate: float = 0.1
     att_dropout_rate: float = 0.1
 
     @nn.compact
-    def __call__(self, input_encoder, deterministic):
+    def __call__(self, input_encoder, *, deterministic):
         """
 
         Parameters
@@ -49,23 +46,28 @@ class EncoderLayer(nn.Module):
 
         Returns
         -------
-        TODO: add dtype
             Output of encoder layer.
         """
 
         # Block 1: Norm, Multi-Head Attention, Add
         x = nn.LayerNorm()(input_encoder)
+
         x = nn.MultiHeadDotProductAttention(
             num_heads=self.num_heads,
             dropout_rate=self.att_dropout_rate,
-        )(x, x)
-        x = nn.Dropout(rate=self.dropout_rate)(x, deterministic=deterministic)
+        )(x, x, deterministic=deterministic)
+
+        x = nn.Dropout(
+            rate=self.dropout_rate,
+        )(x, deterministic=deterministic)
+
         x = x + input_encoder
 
         # Block 2: Norm, Multilayer Perceptron, Add
         y = nn.LayerNorm()(x)
+
         y = MultiLayerPerceptron(
-            dim_model=self.dim_model,
+            hidden_size=self.hidden_size,
             dim_mlp=self.dim_mlp,
             dropout_rate=self.dropout_rate,
         )(y, deterministic=deterministic)

@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # ----------------------------------------------------------------------------
 # Created By  : Sebastian Widmann
 # Institution : TU Munich, Department of Aerospace and Geodesy
@@ -9,6 +7,7 @@
 
 from flax import linen as nn
 
+from src.transformer.embedding import PatchEmbedding, PositionEmbedding
 from src.transformer.decoder_layer import DecoderLayer
 
 
@@ -17,14 +16,16 @@ class Decoder(nn.Module):
 
     Attributes
     ----------
+    img_size: tuple
+        number of pixels per dimension of image (x, y)
+    patches: tuple
+        number of patches per dimension of image (x, y)
+    hidden_size: int
+        dimensionality of embeddings
     num_layers: int
         number of layers
-    pos_embedding: bool = True
-        Add learned positional embeddings to the inputs
     num_heads: int
         number of heads in nn.MultiHeadDotProductAttention
-    dim_model: int
-        dimensionality of embeddings
     dim_mlp: int
         dimensionality of multilayer perceptron layer
     dropout_rate: float
@@ -33,42 +34,65 @@ class Decoder(nn.Module):
         Dropout rate of attention layer. Float between 0 and 1.
     """
 
+    img_size: tuple
+    patches: tuple
+    hidden_size: int
     num_layers: int
-    pos_embedding: bool = True
     num_heads: int
-    dim_model: int
     dim_mlp: int
     dropout_rate: float = 0.1
     att_dropout_rate: float = 0.1
 
     @nn.compact
-    def __call__(self, x, train):
+    def __call__(self, x, y, *, train):
         """ Applies transformer model on the inputs.
 
         Parameters
         ----------
-        x: TODO: add dtype
+        x: jnp.ndarray
+            Inputs of decoder layer.
+        y: jnp.ndarray
             Inputs of encoder layer.
         train: bool
             Set to 'True' when training.
 
         Returns
         -------
-        Output of transformer encoder.
+        Output of transformer decoder.
 
         """
 
-        # TODO: add positional embedding call
+        num_channels = x.shape[-1]
+
+        x = PatchEmbedding(
+            self.patches,
+            self.hidden_size,
+            name='PatchEmbedding'
+        )(x)
+
+        x = PositionEmbedding(name='PositionEmbedding')(x)
+
+        x = nn.Dropout(rate=self.dropout_rate)(x, deterministic=not train)
 
         for lyr in range(self.num_layers):
             x = DecoderLayer(
                 num_heads=self.num_heads,
-                dim_model=self.dim_model,
+                hidden_size=self.hidden_size,
                 dim_mlp=self.dim_mlp,
                 dropout_rate=self.dropout_rate,
                 att_dropout_rate=self.att_dropout_rate,
-            )(x, deterministic=not train)
+                name='Layer{}'.format(lyr),
+            )(x, y, deterministic=not train)
 
-        decoder = nn.LayerNorm(name='decoder_norm')(x)
+        x = nn.LayerNorm()(x)
 
-        return decoder
+        # Deconvolute VIT output to original data shape
+        num_patches = int(self.img_size[0] / self.patches[0])
+        x = x.reshape(-1, num_patches, num_patches, self.hidden_size)
+        x = nn.ConvTranspose(
+            features=num_channels,
+            kernel_size=self.patches,
+            strides=self.patches,
+        )(x)
+
+        return x

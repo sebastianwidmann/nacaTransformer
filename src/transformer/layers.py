@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 # ----------------------------------------------------------------------------
 # Created By  : Sebastian Widmann
 # Institution : TU Munich, Department of Aerospace and Geodesy
@@ -8,7 +6,6 @@
 # ---------------------------------------------------------------------------
 
 import flax.linen as nn
-from typing import Optional
 
 
 class MultiLayerPerceptron(nn.Module):
@@ -17,7 +14,7 @@ class MultiLayerPerceptron(nn.Module):
 
     Attributes
     ----------
-    dim_model: int
+    hidden_size: int
         dimensionality of embeddings
     dim_mlp: int
         dimensionality of multilayer perceptron layer
@@ -25,34 +22,31 @@ class MultiLayerPerceptron(nn.Module):
         Dropout rate. Float between 0 and 1.
     """
 
-    dim_model: Optional[int] = None
+    hidden_size: int
     dim_mlp: int
     dropout_rate: float = 0.1
 
     @nn.compact
-    def __call__(self, input_mlp, deterministic):
+    def __call__(self, x, *, deterministic):
         """
         Applies MLP layer on the inputs.
 
         Parameters
         ----------
-        input_mlp: TODO: add dtype
-            TODO: Add description
+        x: jnp.ndarray
+            Input of MLP layer
         deterministic: bool
             If false, the attention weight is masked randomly using dropout,
             whereas if true, the attention weights are deterministic.
 
         Returns
         -------
-        TODO: add dtype
             Output of MLP layer.
         """
-        dim_model = input_mlp.shape[-1] if self.dim_model is None else \
-            self.dim_model
 
-        x = nn.Dense(features=self.dim_mlp)(input_mlp)
+        x = nn.Dense(features=self.dim_mlp)(x)
         x = nn.gelu(x)
         x = nn.Dropout(rate=self.dropout_rate, deterministic=deterministic)(x)
-        x = nn.Dense(features=dim_model)(x)
+        x = nn.Dense(features=self.hidden_size)(x)
         x = nn.Dropout(rate=self.dropout_rate, deterministic=deterministic)(x)
         return x
