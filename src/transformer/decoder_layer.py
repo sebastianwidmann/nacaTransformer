@@ -53,23 +53,28 @@ class DecoderLayer(nn.Module):
 
         # Block 1: Norm, Multi-Head Attention, Add
         x = nn.LayerNorm()(input_decoder)
+
         x = nn.MultiHeadDotProductAttention(
             num_heads=self.num_heads,
             dropout_rate=self.att_dropout_rate,
             # )(x, x, mask=nn.make_causal_mask(x), deterministic=deterministic)
         )(x, x, deterministic=deterministic)
+
         x = x + input_decoder
 
         # Block 2: Norm, Multi-Head Attention of Encoder and Decoder, Add
         y = nn.LayerNorm()(x)
+
         y = nn.MultiHeadDotProductAttention(
             num_heads=self.num_heads,
             dropout_rate=self.att_dropout_rate,
         )(y, output_encoder, deterministic=deterministic)
+
         y = x + y
 
         # Block 3: Norm, Multilayer Perceptron, Add
         z = nn.LayerNorm()(y)
+
         z = MultiLayerPerceptron(
             hidden_size=self.hidden_size,
             dim_mlp=self.dim_mlp,
