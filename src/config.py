@@ -3,27 +3,32 @@ import ml_collections
 
 def get_config():
     config = ml_collections.ConfigDict()
-    config.batch = 2
-    config.epoch = 1
-    config.patches = (16, 16)
+    config.dataset = '../nacaTransformer/airfoilMNIST/'
+    config.trainer = 'train'
+    # config.trainer = 'preprocess'
+    config.train_size = 0.8
+    config.batch_size = 2
+    config.num_epochs = 5
+    config.prefetch = 1
+    config.learning_rate = 0.3
+    config.weight_decay = 0.0
+
+    config.vit = ml_collections.ConfigDict()
+    config.vit.img_size = (200, 200)
+    config.vit.patches = (10, 10)
+    config.vit.hidden_size = 300  # num_patches^2 * num_channels
+    config.vit.num_layers = 10
+    config.vit.num_heads = 5
+    config.vit.dim_mlp = 4 * config.vit.hidden_size
+    config.vit.dropout_rate = 0.0
+    config.vit.att_dropout_rate = 0.0
 
     config.preprocess = ml_collections.ConfigDict()
-    config.preprocess.readdir = '../airfoilMNIST'
-    config.preprocess.writedir = '../airfoilMNIST/tfrecords'
-    config.preprocess.nsamples = 10
-    config.preprocess.stlformat = 'nacaFOAM'
-    config.preprocess.resize = (
-        -1, 3, -1, 1)  # resize limits (xmin, xmax, ymin, ymax)
-    config.preprocess.resolution = (250, 250)  # new field resolution (nx, ny)
+    config.preprocess.readdir = '/media/sebastianwidmann/Backup500GB/'
+    config.preprocess.writedir = '/media/sebastianwidmann/Backup500GB/airfoilMNIST'
+    config.preprocess.nsamples = 9
+    config.preprocess.dim = (-0.75, 1.25, -1, 1)
     config.preprocess.num_neighbors = 5
     config.preprocess.gpu_id = 0
-
-    config.transformer = ml_collections.ConfigDict()
-    config.transformer.readdir = config.preprocess.writedir
-    config.transformer.num_layers = 6
-    config.transformer.num_heads = 12
-    config.transformer.dim_mlp = 3072
-    config.transformer.dropout_rate = 0.1
-    config.transformer.att_dropout_rate = 0.1
 
     return config
