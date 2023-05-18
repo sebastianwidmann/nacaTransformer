@@ -12,25 +12,19 @@ from ml_collections import ConfigDict
 import vtk
 from vtk.util.numpy_support import vtk_to_numpy
 
-from interpolation import interpolate
+from src.preprocessing.interpolation import interpolate
 
 
 def create_tfExample(x: np.ndarray, y: np.ndarray):
-    """
-    Create example for data sample which will store the necessary information
-    about each CFD simulation
+    """ Create example for data sample which will store the necessary
+    information about each CFD simulation
 
     Parameters
     ----------
-    airfoil: str
-             shape of NACA airfoil described using a 4- or 5-digit code
-    aoa: float
-           angle of attack of NACA airfoil
-    mach: float
-          freestream mach number
-    field: np.ndarray
-          flow field data in the following column format [x y TMean
-          alphatMean kMean nutMean omegaMean pMean rhoMean UxMean UyMean]
+    y: np.ndarray
+            encoder input
+    x: np.ndarray
+            decoder inpu
 
     Returns
     -------
@@ -39,30 +33,32 @@ def create_tfExample(x: np.ndarray, y: np.ndarray):
     """
 
     feature = {
-        'data_encoder': tf.train.Feature(float_list=tf.train.FloatList(
+        'encoder': tf.train.Feature(float_list=tf.train.FloatList(
             value=x.flatten())),
-        'data_decoder': tf.train.Feature(float_list=tf.train.FloatList(
+        'decoder': tf.train.Feature(float_list=tf.train.FloatList(
             value=y.flatten())),
     }
 
     return tf.train.Example(features=tf.train.Features(feature=feature))
 
 
-def vtk_to_tfTensor(vtu_dir: str, stl_dir: str, config: ConfigDict,
+def vtk_to_tfTensor(config: ConfigDict, vtu_dir: str, stl_dir: str,
                     mach: float):
-    """
-    Convert datasets from airfoilMNIST into the TFRecord format (more
+    """ Convert datasets from airfoilMNIST into the TFRecord format (more
     information about TFRecords can be found on
     https://www.tensorflow.org/tutorials/load_data/tfrecord)
 
     Parameters
     ----------
-    vtu_dir: str
-             raw field data with coordinate locations and field data values
-    stl_dir: str
-             directory to .stl-file of wing geometry
     config: ConfigDict
-            configuration parameters for kNN and interpolation
+            configuration parameters
+    vtu_dir: str
+            raw field data with coordinate locations and field data values
+    stl_dir: str
+            directory to .stl-file of wing geometry
+    mach: float
+            Freestream mach number
+
 
     Returns
     -------
@@ -72,48 +68,40 @@ def vtk_to_tfTensor(vtu_dir: str, stl_dir: str, config: ConfigDict,
                  kMean nutMean omegaMean pMean rhoMean UxMean UyMean sdf]
     """
 
-    # check data_format type
-    format_types = ['nacaFOAM']
-    # format_types = ['nacaFOAM', 'Selig', 'Lednicer']
-    if config.stlformat not in format_types:
-        raise ValueError('Invalid format. Expected one of: %s' % format_types)
+    """
+    For any NACA .stl-file written with nacaFOAM, the points are read
+    into arrays in the order such the side surface at z=1 is written
+    first, followed by the side surface at z=-1 and finally the
+    airfoil shape surface. The point order is starting from the trailing
+    edge, moving along the lower surface towards the leading edge and
+    back on the upper surface towards the trailing edge again.
 
-    if config.stlformat == 'nacaFOAM':
-        """
-        For any NACA .stl-file written with nacaFOAM, the points are read
-        into arrays in the order such the side surface at z=1 is written
-        first, followed by the side surface at z=-1 and finally the
-        airfoil shape surface. The point order is starting from the trailing
-        edge, moving along the lower surface towards the leading edge and
-        back on the upper surface towards the trailing edge again.
+    To create a mask for the interpolated grid, the side surface @
+    z=-1 and airfoil shape surface must be removed as these points are
+    duplicated.
+    """
+    # read point coordinates from file
+    points = mesh.Mesh.from_file(stl_dir)[:, 0:3]
 
-        To create a mask for the interpolated grid, the side surface @
-        z=-1 and airfoil shape surface must be removed as these points are
-        duplicated.
-        """
+    # remove duplicate points of side surface at x=-1
+    points = points[points[:, 2] > 0][:, 0:2]
 
-        # read point coordinates from file
-        raw_geom = mesh.Mesh.from_file(stl_dir)[:, 0:3]
+    # find index where points of side surface end
+    idx = np.where(points == np.max(points[:, 0]))[0][-1]
 
-        # remove duplicate points of side surface at x=-1
-        raw_geom = raw_geom[raw_geom[:, 2] > 0][:, 0:2]
+    # remove redundant points from .stl-file type
+    points = points[: idx + 1, :]
 
-        # find index where points of side surface end
-        id = np.where(raw_geom == np.max(raw_geom[:, 0]))[0][-1]
+    # read fields from vtk files
+    fields = vtu_to_numpy(vtu_dir)
+    fields = resize(fields, *config.preprocess.dim)
 
-        # remove redundant points from .stl-file type
-        raw_geom = raw_geom[: id + 1, :]
+    # interpolate and return equally-spaced fields for encoder and decoder
+    x, y = interpolate(config, fields, points, mach)
 
-    raw_data = vtu_to_numpy(vtu_dir)
-    raw_data = resize(raw_data, *config.resize)
-
-    x, y = interpolate(raw_data, raw_geom, mach, *config.resize,
-                       *config.resolution, config.num_neighbors,
-                       config.gpu_id)
-
-    w, h = config.resolution[0], config.resolution[1]
+    # Reshape into correct shapes for VIT
+    w, h = config.vit.img_size
     c_encoder, c_decoder = x.shape[1], y.shape[1]
-
     x = x.reshape([w, h, c_encoder])
     y = y.reshape([w, h, c_decoder])
 
@@ -121,8 +109,7 @@ def vtk_to_tfTensor(vtu_dir: str, stl_dir: str, config: ConfigDict,
 
 
 def vtu_to_numpy(vtu_dir: str):
-    """
-    Convert datasets from airfoilMNIST in vtk format into numpy arrays
+    """ Convert datasets from airfoilMNIST in vtk format into numpy arrays.
 
     Parameters
     ----------
@@ -176,16 +163,16 @@ def vtu_to_numpy(vtu_dir: str):
                                  [2, -1], axis=1)  # remove z-coord and Uz
     # and only return single plane of points
 
-    numpy_point_data = np.delete(numpy_point_data, [2, 3, 4, 5, 6, 8],
-                                 axis=1)  # TODO: REMOVE BEFORE FINAL COMMIT
+    # Only return pressure, velocity Ux, velocity Uy
+    numpy_point_data = np.delete(
+        numpy_point_data, [2, 3, 4, 5, 6, 8], axis=1)
 
     return numpy_point_data
 
 
 def resize(data: np.ndarray, xmin: float, xmax: float, ymin: float, ymax):
-    """
-    Reduce the size of the computational domain from the initial size of
-    (xmin=-10, xmax=30, ymin=-10, ymax=10)
+    """ Reduce the size of the computational domain from the initial size of
+    (xmin=-10, xmax=30, ymin=-10, ymax=10).
 
     Parameters
     ----------

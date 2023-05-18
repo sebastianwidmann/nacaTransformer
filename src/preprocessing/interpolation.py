@@ -4,41 +4,28 @@
 # Created Date: March 8, 2023
 # version ='1.0'
 # ---------------------------------------------------------------------------
-
+from ml_collections import ConfigDict
 import faiss
 import numpy as np
 import cuspatial, cudf
 
 
-def interpolate(source_data: np.ndarray, wing_data: np.ndarray, mach: float,
-                xmin: float, xmax: float, ymin: float, ymax: float, nx: int,
-                ny: int, k: int, gpu_id: int, p: int = 2):
+def interpolate(config: ConfigDict, source_data: np.ndarray,
+                wing_data: np.ndarray, mach: float, k: int = 5, p: int = 2):
     """
     Interpolate from the base mesh onto a new mesh for the given coordinate
     points and field data values
 
     Parameters
     ----------
+    config: ConfigDict
+            configuration parameters
     source_data: numpy.ndarray
                  raw field data with coordinate locations and field data values
     wing_data: numpy.ndarray
                wing geometry in the .stl file format
-    xmin: float
-          minimum bound upstream of wing geometry
-    xmax: float
-          maximum bound downstream of wing geometry
-    ymin: float
-          minimum bound below of wing geometry
-    ymax: float
-          minimum bound above of wing geometry
-    nx: int
-        number of interpolation points in x1 direction
-    ny: int
-        number of interpolation points in x2 direction
     k: int
        number of nearest neighbours
-    gpu_id: int
-            ID of GPU which shall be used
     p: int (default = 2)
        power parameter
 
@@ -50,13 +37,16 @@ def interpolate(source_data: np.ndarray, wing_data: np.ndarray, mach: float,
                  kMean nutMean omegaMean pMean rhoMean UxMean UyMean sdf]
     """
 
+    xmin, xmax, ymin, ymax = config.preprocess.dim
+    nx, ny = config.vit.img_size
+
     xq = np.mgrid[xmin:xmax:(nx * 1j), ymin:ymax:(ny * 1j)].reshape(2, -1).T
 
     xb = source_data[:, 0:2]
     yb = source_data[:, 2:]
 
     # find nearest neighbours and indices
-    dist, idx = find_knn(xb, xq, k, gpu_id)
+    dist, idx = find_knn(xb, xq, k, config.preprocess.gpu_id)
 
     # calculate inverse distance weighting
     weights = np.power(np.reciprocal(dist, out=np.zeros_like(dist),
@@ -69,7 +59,8 @@ def interpolate(source_data: np.ndarray, wing_data: np.ndarray, mach: float,
 
     wing_points_idx = find_points_inside(xq, wing_data)
 
-    sdf_dist, _ = find_knn(wing_data, target_data[:, 0:2], 1, gpu_id)
+    sdf_dist, _ = find_knn(wing_data, target_data[:, 0:2], 1,
+                           config.preprocess.gpu_id)
 
     # set sdf values inside wing equal to minus 1
     sdf_dist[wing_points_idx, :] = -1
@@ -79,10 +70,22 @@ def interpolate(source_data: np.ndarray, wing_data: np.ndarray, mach: float,
 
     # split data into arrays for encoder / decoder
     mach_data = np.copy(sdf_dist)
-    mach_data = np.where(mach == -1, -1, mach)
+    mach_data = np.where(mach_data == -1, -1, mach)
+    mach_data[wing_points_idx, :] = 0
 
-    x = np.hstack((sdf_dist, mach_data))
+    # x = np.hstack((sdf_dist, mach_data))
+    x = mach_data
+
+    # Delete point coordinates from decoder input
     y = target_data[:, -3:]
+
+    # Normalise pressure by freestream pressure
+    y[:, 0] /= 101325
+
+    # Normalise velocities by freestream velocity
+    u_inf = mach * np.sqrt(1.4 * 287.058 * 288.15)
+    y[:, 1] /= u_inf
+    y[:, 2] /= u_inf
 
     return x, y
 

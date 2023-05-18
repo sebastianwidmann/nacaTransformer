@@ -9,9 +9,13 @@ from absl import app
 from absl import flags
 from absl import logging
 from ml_collections import config_flags
-import tensorflow as tf
 import jax
+import os
 
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # disable INFO and WARNING messages
+import tensorflow as tf
+
+from src.preprocessing.preprocess import generate_tfds_dataset
 from src.train import train_and_evaluate
 
 FLAGS = flags.FLAGS
@@ -35,7 +39,9 @@ def main(argv):
                  jax.process_count())
     logging.info('JAX local devices: %r', jax.local_devices())
 
-    if FLAGS.config.trainer == 'train':
+    if FLAGS.config.trainer == 'preprocess':
+        generate_tfds_dataset(FLAGS.config)
+    elif FLAGS.config.trainer == 'train':
         train_and_evaluate(FLAGS.config)
     elif FLAGS.config.trainer == 'inference':
         print('Implement inference')
