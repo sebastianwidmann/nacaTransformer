@@ -9,36 +9,24 @@ import tensorflow_datasets as tfds
 import tensorflow as tf
 
 
-def get_data_from_tfds(*, config, mode, num_prefetch=1):
-    builder = tfds.builder_from_directory(builder_dir=config.readdir)
+def get_data_from_tfds(*, config, mode):
+    builder = tfds.builder_from_directory(builder_dir=config.dataset)
 
     dataset = builder.as_dataset(
         split=tfds.split_for_jax_process(mode),
         shuffle_files=True,
-        # batch_size=config.batch_size,
     )
 
-    dataset = dataset.map(
-        lambda sample: {
-            'encoder': sample['data_encoder'],
-            'decoder': sample['data_decoder'],
-        })
-
     if mode == 'train':
-        dataset = dataset.repeat(config.num_epochs).shuffle(
-            buffer_size=1000,
-            reshuffle_each_iteration=True,
-        )
-        dataset = dataset.batch(batch_size=config.batch_size,
-                                num_parallel_calls=tf.data.AUTOTUNE).prefetch(
-            num_prefetch)
-    elif mode == 'test':
-        dataset = dataset.shuffle(
-            buffer_size=1000,
-            reshuffle_each_iteration=True,
-        )
-        dataset = dataset.batch(batch_size=config.batch_size,
-                                num_parallel_calls=tf.data.AUTOTUNE).prefetch(
-            num_prefetch)
+        # Set TF random seed to ensure reproducible shuffling
+        tf.random.set_seed(0)
+        
+        dataset = dataset.shuffle(1024, reshuffle_each_iteration=True).repeat(
+            config.num_epochs)
+
+    dataset = dataset.batch(batch_size=config.batch_size,
+                            drop_remainder=True,
+                            num_parallel_calls=tf.data.AUTOTUNE).prefetch(
+        tf.data.AUTOTUNE)
 
     return dataset
