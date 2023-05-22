@@ -4,54 +4,86 @@
 # Created Date: March 22, 2023
 # version ='1.0'
 # ---------------------------------------------------------------------------
+from ml_collections import ConfigDict
 from matplotlib import pyplot as plt
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import numpy as np
 
 
-def plot_field(data, field, filename, xmin, xmax, ymin, ymax, nx, ny,
-               savefig=False):
+def plot_prediction(config: ConfigDict, predictions, ground_truth, epoch, name):
+    fig, ax = plt.subplots(1, 2, figsize=(15, 5))
+
+    xmin, xmax, ymin, ymax = config.preprocess.dim
+    nx, ny = config.vit.img_size
     x, y = np.mgrid[xmin:xmax:(nx * 1j), ymin:ymax:(ny * 1j)]
 
-    field_idx_list = {'T': 2, 'alphaT': 3, 'k': 4, 'nut': 5, 'omega': 6,
-                      'p': 7, 'rho': 8, 'Ux': 9, 'Uy': 10, 'sdf': 11}
+    im0 = ax[0].pcolormesh(
+        x, y, predictions,
+        vmin=np.min(predictions),
+        vmax=np.max(predictions)
+    )
 
-    cbar_list = {
-        2: r'Temperature $T$ [$K$]',
-        3: r'Thermal Diffusivity $\alpha_T$ [$m^2/s$]',
-        4: r'Turbulent Kinetic Energy $k$ [$m^2/s^2$]',
-        5: r'Eddy viscosity $\nu_t$ [$m^2/s$]',
-        6: r'Turbulence Specific Dissipation Rate $\omega$ [$s^{-1}$]',
-        7: r'Pressure $p$ [$Pa$]',
-        8: r'Density $\rho$ [$kg/m^3$]',
-        9: r'Horizontal Velocity $U_x$ [$m^2/s$]',
-        10: r'Vertical Velocity $U_y$ [$m^2/s$]',
-        11: r'Signed Distance Field [$m$]'
-    }
+    im1 = ax[1].pcolormesh(
+        x, y, ground_truth,
+        vmin=np.min(ground_truth),
+        vmax=np.max(ground_truth)
+    )
 
-    field_idx = field_idx_list[field]
+    ax0_divider = make_axes_locatable(ax[0])
+    ax1_divider = make_axes_locatable(ax[1])
+    cax0 = ax0_divider.append_axes("right", "3%", pad="3%")
+    cax1 = ax1_divider.append_axes("right", "3%", pad="3%")
 
-    if field_idx in [2, 4, 6, 7, 8]:
-        min_val = np.min(np.ma.masked_values(data[:, field_idx], 0, copy=False))
-    else:
-        min_val = np.min(data[:, field_idx])
+    plt.colorbar(im0, cax=cax0, label='Predictions',
+                 ticks=np.linspace(np.min(predictions), np.max(predictions),
+                                   10, endpoint=True))
 
-    max_val = data[:, field_idx].max()
+    plt.colorbar(im1, cax=cax1, label='Ground truth',
+                 ticks=np.linspace(np.min(ground_truth), np.max(ground_truth),
+                                   10, endpoint=True))
 
-    fig, ax = plt.subplots(1, 1, figsize=(10, 5))
+    # cax0.xaxis.set_ticks_position("top")
+    # cax1.xaxis.set_ticks_position("top")
 
-    # create new axis for colorbar to be closer to figure
-    divider = make_axes_locatable(plt.gca())
-    cax = divider.append_axes("right", "3%", pad="3%")
+    plt.tight_layout()
+    plt.subplots_adjust(hspace=2)
 
-    im = ax.pcolormesh(x, y, data[:, field_idx].reshape(nx, ny),
-                       vmin=min_val, vmax=max_val)
-    plt.colorbar(im, cax=cax, label=cbar_list[field_idx],
-                 ticks=np.linspace(min_val, max_val, 10, endpoint=True))
+    # plt.show()
+    if name == 0:
+        field = 'p'
+    elif name == 1:
+        field = 'ux'
+    elif name == 2:
+        field = 'uy'
+    plt.savefig('vit_{}_{}.png'.format(field, epoch), dpi=300)
+    plt.close()
+
+
+def plot_loss(config: ConfigDict, train_loss, test_loss):
+    fig, ax = plt.subplots(1, 1, figsize=(5, 5))
+
+    x = range(0, config.num_epochs)
+
+    ax.plot(x, train_loss, label='Train')
+    ax.plot(x, test_loss, label='Test')
+
+    ax.set_yscale('log')
+
+    ax.set_xlim(0, config.num_epochs)
+    ax.set_xlabel('Epochs')
+    ax.set_ylabel('Mean Square Error')
+
+    ax.legend(loc=1)
+
+    plt.grid(visible=True, which='major', color='#444', linestyle='-')
+    plt.grid(visible=True, which='minor', color='#ccc', linestyle='--')
+
+    ax.set_title(
+        'Epochs = {}, Batch size = {}, Lr = {}, Weight decay = {}'.format(
+            config.num_epochs, config.batch_size,
+            config.learning_rate, config.weight_decay), fontsize=8)
 
     plt.tight_layout()
 
-    plt.show()
-
-    if savefig:
-        plt.savefig('../output/{}.png'.format(filename), dpi=300)
+    plt.savefig('vit_loss.png', dpi=300)
+    plt.close()
