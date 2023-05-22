@@ -11,7 +11,7 @@ import cuspatial, cudf
 
 
 def interpolate(config: ConfigDict, source_data: np.ndarray,
-                wing_data: np.ndarray, mach: float, k: int = 5, p: int = 2):
+                wing_data: np.ndarray, mach: float, p: int = 2):
     """
     Interpolate from the base mesh onto a new mesh for the given coordinate
     points and field data values
@@ -21,13 +21,13 @@ def interpolate(config: ConfigDict, source_data: np.ndarray,
     config: ConfigDict
             configuration parameters
     source_data: numpy.ndarray
-                 raw field data with coordinate locations and field data values
+            raw field data with coordinate locations and field data values
     wing_data: numpy.ndarray
-               wing geometry in the .stl file format
-    k: int
-       number of nearest neighbours
+            wing geometry in the .stl file format
+    mach: float
+            Freestream mach number
     p: int (default = 2)
-       power parameter
+        power parameter
 
     Returns
     -------
@@ -39,6 +39,7 @@ def interpolate(config: ConfigDict, source_data: np.ndarray,
 
     xmin, xmax, ymin, ymax = config.preprocess.dim
     nx, ny = config.vit.img_size
+    k = config.preprocess.num_neighbors
 
     xq = np.mgrid[xmin:xmax:(nx * 1j), ymin:ymax:(ny * 1j)].reshape(2, -1).T
 
