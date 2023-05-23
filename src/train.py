@@ -23,8 +23,11 @@ from src.utilities.visualisation import plot_prediction, plot_loss
 PRNGKey = Any
 
 
-def create_train_state(config: ConfigDict, model: VisionTransformer,
-                       rng: PRNGKey) -> train_state.TrainState:
+def create_train_state(config: ConfigDict, rng: PRNGKey) -> \
+        train_state.TrainState:
+    # Create model instance
+    model = VisionTransformer(config.vit)
+
     # Initialise model and use JIT to reside params in CPU memory
     variables = jax.jit(lambda: model.init(rng, jnp.ones(
         [config.batch_size, *config.vit.img_size, 1]), jnp.ones(
@@ -75,8 +78,40 @@ def test_step(state: train_state.TrainState, batch: jnp.ndarray):
     return preds, loss
 
 
-def learning_rate_scheduler(num_steps, warmup_steps):
-    return num_steps
+def learning_rate_scheduler(num_steps, base_lr, decay_type, warmup_steps,
+                            linear_end=1e-5):
+    """Creates learning rate schedule.
+    Currently only warmup + {linear,cosine} but will be a proper mini-language
+    like preprocessing one in the future.
+    Args:
+      total_steps: The total number of steps to run.
+      base: The starting learning-rate (without warmup).
+      decay_type: 'linear' or 'cosine'.
+      warmup_steps: how many steps to warm up for.
+      linear_end: Minimum learning rate.
+    Returns:
+      A function learning_rate(step): float -> {"learning_rate": float}.
+    """
+
+    def step_fn(step):
+        """Step to learning rate function."""
+        lr = base_lr
+
+        progress = (step - warmup_steps) / float(num_steps - warmup_steps)
+        progress = jnp.clip(progress, 0.0, 1.0)
+        if decay_type == 'linear':
+            lr = linear_end + (lr - linear_end) * (1.0 - progress)
+        elif decay_type == 'cosine':
+            lr = lr * 0.5 * (1. + jnp.cos(jnp.pi * progress))
+        else:
+            raise ValueError(f'Unknown lr type {decay_type}')
+
+        if warmup_steps:
+            lr = lr * jnp.minimum(1., step / warmup_steps)
+
+        return jnp.asarray(lr, dtype=jnp.float32)
+
+    return step_fn
 
 
 def train_and_evaluate(config: ConfigDict):
@@ -90,9 +125,8 @@ def train_and_evaluate(config: ConfigDict):
     # Split PRNG key into required keys
     rng, rng_params, rng_dropout = jax.random.split(rng, num=3)
 
-    # Create model instance and TrainState
-    model = VisionTransformer(config.vit)
-    state = create_train_state(config, model, rng_params)
+    # Create TrainState
+    state = create_train_state(config, rng_params)
 
     steps_per_epoch = ds_train.cardinality().numpy() / config.num_epochs
 
@@ -114,22 +148,17 @@ def train_and_evaluate(config: ConfigDict):
             train_metrics.append(train_loss)
             test_metrics.append(test_loss)
 
-            epoch = int((step + 1) // steps_per_epoch)
-
+            epoch = int(step / steps_per_epoch) + 1
             logging.info(
                 'Epoch {}: Train_loss = {:.6f}, Test_loss = {:.6f}'.format(
                     epoch, train_loss, test_loss))
 
-            if epoch % 10 == 0:
-                plot_prediction(config, preds[0, :, :, 0],
-                                test_batch['decoder'][0,
-                                :, :, 1], epoch, 0)
-                plot_prediction(config, preds[0, :, :, 1],
-                                test_batch['decoder'][0,
-                                :, :, 1], epoch, 1)
-                plot_prediction(config, preds[0, :, :, 2],
-                                test_batch['decoder'][0,
-                                :, :, 2], epoch, 2)
+            plot_prediction(config, preds[0, :, :, 0],
+                            test_batch['decoder'][0, :, :, 1], epoch, 0)
+            plot_prediction(config, preds[0, :, :, 1],
+                            test_batch['decoder'][0, :, :, 1], epoch, 1)
+            plot_prediction(config, preds[0, :, :, 2],
+                            test_batch['decoder'][0, :, :, 2], epoch, 2)
 
     # Data analysis plots
     plot_loss(config, train_metrics, test_metrics)
