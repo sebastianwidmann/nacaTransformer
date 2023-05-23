@@ -17,12 +17,21 @@ def get_data_from_tfds(*, config, mode):
         shuffle_files=True,
     )
 
+    # TODO: Remove when full dataset is used!
+    # dataset = dataset.cache()
+
     if mode == 'train':
         # Set TF random seed to ensure reproducible shuffling
         tf.random.set_seed(0)
-        
-        dataset = dataset.shuffle(1024, reshuffle_each_iteration=True).repeat(
-            config.num_epochs)
+
+        dataset = dataset.shuffle(builder.info.splits['train'].num_examples,
+                                  reshuffle_each_iteration=True)
+
+        # TODO: UNCOMMENT FOR CASES WHERE DS IS TOO LARGE FOR MEMORY
+        # dataset = dataset.shuffle(buffer_size=1024,
+        #                           reshuffle_each_iteration=True)
+
+        dataset = dataset.repeat(config.num_epochs)
 
     dataset = dataset.batch(batch_size=config.batch_size,
                             drop_remainder=True,
