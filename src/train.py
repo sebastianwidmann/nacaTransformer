@@ -137,7 +137,9 @@ def train_and_evaluate(config: ConfigDict):
         state, train_loss = train_step(state, batch, rng_dropout)
         train_log.append(train_loss)
 
-        if (step + 1) % steps_per_epoch == 0:
+        if (step + 1) % int(steps_per_epoch) == 0 and step != 0:
+            epoch = int((step + 1) / int(steps_per_epoch))
+
             for test_batch in tfds.as_numpy(ds_test):
                 preds, test_loss = test_step(state, test_batch)
                 test_log.append(test_loss)
@@ -148,17 +150,17 @@ def train_and_evaluate(config: ConfigDict):
             train_metrics.append(train_loss)
             test_metrics.append(test_loss)
 
-            epoch = int(step / steps_per_epoch) + 1
             logging.info(
                 'Epoch {}: Train_loss = {:.6f}, Test_loss = {:.6f}'.format(
                     epoch, train_loss, test_loss))
 
-            plot_prediction(config, preds[0, :, :, 0],
-                            test_batch['decoder'][0, :, :, 1], epoch, 0)
-            plot_prediction(config, preds[0, :, :, 1],
-                            test_batch['decoder'][0, :, :, 1], epoch, 1)
-            plot_prediction(config, preds[0, :, :, 2],
-                            test_batch['decoder'][0, :, :, 2], epoch, 2)
+            if epoch % 1000 == 0:
+                plot_prediction(config, preds[0, :, :, 0],
+                                test_batch['decoder'][0, :, :, 1], epoch, 0)
+                plot_prediction(config, preds[0, :, :, 1],
+                                test_batch['decoder'][0, :, :, 1], epoch, 1)
+                plot_prediction(config, preds[0, :, :, 2],
+                                test_batch['decoder'][0, :, :, 2], epoch, 2)
 
     # Data analysis plots
     plot_loss(config, train_metrics, test_metrics)
