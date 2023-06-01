@@ -17,7 +17,7 @@ import tensorflow_datasets as tfds
 from typing import Any, Tuple
 
 from src.transformer.input_pipeline import get_data_from_tfds
-from src.transformer.vit import VisionTransformer
+from src.transformer.network import VisionTransformer
 from src.utilities.visualisation import plot_prediction, plot_loss
 
 PRNGKey = Any
@@ -32,7 +32,7 @@ def create_train_state(config: ConfigDict, rng: PRNGKey) -> \
     variables = jax.jit(lambda: model.init(rng, jnp.ones(
         [config.batch_size, *config.vit.img_size, 1]), jnp.ones(
         [config.batch_size, *config.vit.img_size, 3]), train=False),
-                        backend='cpu')()
+                        )()
 
     # Initialise train state
     tx = optax.adamw(learning_rate=config.learning_rate,
@@ -156,7 +156,7 @@ def train_and_evaluate(config: ConfigDict):
 
             if epoch % 1000 == 0:
                 plot_prediction(config, preds[0, :, :, 0],
-                                test_batch['decoder'][0, :, :, 1], epoch, 0)
+                                test_batch['decoder'][0, :, :, 0], epoch, 0)
                 plot_prediction(config, preds[0, :, :, 1],
                                 test_batch['decoder'][0, :, :, 1], epoch, 1)
                 plot_prediction(config, preds[0, :, :, 2],
@@ -165,8 +165,20 @@ def train_and_evaluate(config: ConfigDict):
     # Data analysis plots
     plot_loss(config, train_metrics, test_metrics)
 
+    # save raw loss data into txt-file
+    raw_loss = np.concatenate((train_metrics, test_metrics))
+    raw_loss = raw_loss.reshape(2, -1).transpose()
+    np.savetxt('loss_raw.txt', raw_loss, delimiter=',')
+
     # Save model
     ckpt = {'model': state}
     orbax_checkpointer = orbax.checkpoint.PyTreeCheckpointer()
     save_args = orbax_utils.save_args_from_target(ckpt)
     orbax_checkpointer.save('nacaVIT', ckpt, save_args=save_args)
+    #
+    # # model = VisionTransformer(config.vit)
+    # #
+    # # x = jnp.ones([config.batch_size, *config.vit.img_size, 1])
+    # # y = jnp.ones([config.batch_size, *config.vit.img_size, 3])
+    # # model.tabulate({'params': rng_params, 'dropout': rng_dropout}, x, y,
+    # #                train=True)
