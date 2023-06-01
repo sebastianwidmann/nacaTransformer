@@ -16,6 +16,7 @@ from tqdm import tqdm
 
 from src.preprocessing.conversion import vtk_to_tfTensor, create_tfExample
 from src.utilities.visualisation import plot_prediction
+from src.utilities.airfoilMNIST import prefilter_dataset
 
 
 def generate_tfds_dataset(config: ConfigDict):
@@ -36,6 +37,9 @@ def generate_tfds_dataset(config: ConfigDict):
     vtu_list = [x for x in sorted(os.listdir(vtu_folder)) if x.endswith('.vtu')]
     stl_list = [("_".join(x.split("_", 2)[:2]) + ".stl") for x in vtu_list]
 
+    vtu_list = prefilter_dataset(vtu_list, aoa_limits=config.preprocess.aoa,
+                                 mach_limits=config.preprocess.mach)
+
     dataset = list(zip(vtu_list, stl_list))
 
     ds_train = [dataset.pop(random.randrange(len(dataset))) for _ in
@@ -53,7 +57,6 @@ def generate_tfds_dataset(config: ConfigDict):
 
     train_shards, test_shards = [], []
 
-    # with open('errors.txt', 'w') as f:
     for i in tqdm(range(n_files_train), desc='Train split', position=0):
         if train_remainder != 0 and i == n_files_train - 1:
             batch = [ds_train.pop(random.randrange(len(ds_train))) for _ in
@@ -85,8 +88,6 @@ def generate_tfds_dataset(config: ConfigDict):
                 try:
                     x, y = vtk_to_tfTensor(config, vtu_dir, stl_dir, mach)
                     example = create_tfExample(x, y)
-
-                    plot_prediction(config, y[:, :, 0], y[:, :, 1])
                     writer.write(example.SerializeToString())
 
                     j += 1
