@@ -6,6 +6,7 @@
 # ---------------------------------------------------------------------------
 from absl import logging
 from flax.training import train_state, orbax_utils
+import functools
 import jax
 import jax.numpy as jnp
 from ml_collections import ConfigDict
@@ -18,12 +19,14 @@ from typing import Any, Tuple
 
 from src.transformer.input_pipeline import get_data_from_tfds
 from src.transformer.network import VisionTransformer
-from src.utilities.visualisation import plot_prediction, plot_loss
+from src.utilities.schedulers import load_learning_rate_scheduler
+from src.utilities.visualisation import plot_prediction, plot_delta, plot_loss
 
 PRNGKey = Any
 
 
-def create_train_state(config: ConfigDict, rng: PRNGKey) -> \
+# @functools.partial(jax.pmap, static_broadcasted_argnums=0)
+def create_train_state(config: ConfigDict, lr_scheduler, rng: PRNGKey) -> \
         train_state.TrainState:
     # Create model instance
     model = VisionTransformer(config.vit)
@@ -35,7 +38,7 @@ def create_train_state(config: ConfigDict, rng: PRNGKey) -> \
                         )()
 
     # Initialise train state
-    tx = optax.adamw(learning_rate=config.learning_rate,
+    tx = optax.adamw(learning_rate=lr_scheduler,
                      weight_decay=config.weight_decay)
 
     return train_state.TrainState.create(
@@ -43,6 +46,7 @@ def create_train_state(config: ConfigDict, rng: PRNGKey) -> \
 
 
 @jax.jit
+# @functools.partial(jax.pmap, axis_name='ensemble')
 def train_step(state: train_state.TrainState, batch: jnp.ndarray,
                rng: PRNGKey) -> Tuple[train_state.TrainState, Any]:
     # Generate new dropout key for each step
@@ -67,6 +71,7 @@ def train_step(state: train_state.TrainState, batch: jnp.ndarray,
 
 
 @jax.jit
+# @jax.pmap
 def test_step(state: train_state.TrainState, batch: jnp.ndarray):
     preds = state.apply_fn({'params': state.params},
                            batch['encoder'], batch['decoder'],
@@ -78,63 +83,41 @@ def test_step(state: train_state.TrainState, batch: jnp.ndarray):
     return preds, loss
 
 
-def learning_rate_scheduler(num_steps, base_lr, decay_type, warmup_steps,
-                            linear_end=1e-5):
-    """Creates learning rate schedule.
-    Currently only warmup + {linear,cosine} but will be a proper mini-language
-    like preprocessing one in the future.
-    Args:
-      total_steps: The total number of steps to run.
-      base: The starting learning-rate (without warmup).
-      decay_type: 'linear' or 'cosine'.
-      warmup_steps: how many steps to warm up for.
-      linear_end: Minimum learning rate.
-    Returns:
-      A function learning_rate(step): float -> {"learning_rate": float}.
-    """
-
-    def step_fn(step):
-        """Step to learning rate function."""
-        lr = base_lr
-
-        progress = (step - warmup_steps) / float(num_steps - warmup_steps)
-        progress = jnp.clip(progress, 0.0, 1.0)
-        if decay_type == 'linear':
-            lr = linear_end + (lr - linear_end) * (1.0 - progress)
-        elif decay_type == 'cosine':
-            lr = lr * 0.5 * (1. + jnp.cos(jnp.pi * progress))
-        else:
-            raise ValueError(f'Unknown lr type {decay_type}')
-
-        if warmup_steps:
-            lr = lr * jnp.minimum(1., step / warmup_steps)
-
-        return jnp.asarray(lr, dtype=jnp.float32)
-
-    return step_fn
-
-
 def train_and_evaluate(config: ConfigDict):
     logging.info("Initialising airfoilMNIST dataset.")
 
     ds_train = get_data_from_tfds(config=config, mode='train')
     ds_test = get_data_from_tfds(config=config, mode='test')
 
+    steps_per_epoch = ds_train.cardinality().numpy() / config.num_epochs
+    total_steps = ds_train.cardinality().numpy()
+
     # Create PRNG key
     rng = jax.random.PRNGKey(0)
     # Split PRNG key into required keys
     rng, rng_params, rng_dropout = jax.random.split(rng, num=3)
 
-    # Create TrainState
-    state = create_train_state(config, rng_params)
+    # Create learning rate scheduler
+    lr_scheduler = load_learning_rate_scheduler(
+        name=config.learning_rate_scheduler,
+        total_steps=total_steps,
+    )
 
-    steps_per_epoch = ds_train.cardinality().numpy() / config.num_epochs
+    # Create TrainState
+    state = create_train_state(config, lr_scheduler, rng_params)
+    # state = create_train_state(config, jax.random.split(rng_params,
+    #                                                     jax.device_count()))
 
     train_metrics, test_metrics, train_log, test_log = [], [], [], []
 
     logging.info("Starting training loop. Initial compile might take a while.")
+
     for step, batch in enumerate(tfds.as_numpy(ds_train)):
         state, train_loss = train_step(state, batch, rng_dropout)
+        # state, train_loss = pad_shard_unpad(train_step)(state,
+        #                                                 batch,
+        #                                                 rng_dropout,
+        #                                                 min_device_batch=config.batch_size)
         train_log.append(train_loss)
 
         if (step + 1) % int(steps_per_epoch) == 0 and step != 0:
@@ -154,7 +137,7 @@ def train_and_evaluate(config: ConfigDict):
                 'Epoch {}: Train_loss = {:.6f}, Test_loss = {:.6f}'.format(
                     epoch, train_loss, test_loss))
 
-            if epoch % 1000 == 0:
+            if epoch % config.output_frequency == 0:
                 plot_prediction(config, preds[0, :, :, 0],
                                 test_batch['decoder'][0, :, :, 0], epoch, 0)
                 plot_prediction(config, preds[0, :, :, 1],
@@ -162,8 +145,15 @@ def train_and_evaluate(config: ConfigDict):
                 plot_prediction(config, preds[0, :, :, 2],
                                 test_batch['decoder'][0, :, :, 2], epoch, 2)
 
+            if epoch == config.num_epochs:
+                plot_delta(config, preds[0, :, :, ], test_batch['decoder'][0,
+                                                     :, :, ], epoch, 'cividis')
+
     # Data analysis plots
-    plot_loss(config, train_metrics, test_metrics)
+    try:
+        plot_loss(config, train_metrics, test_metrics)
+    except ValueError:
+        pass
 
     # save raw loss data into txt-file
     raw_loss = np.concatenate((train_metrics, test_metrics))
@@ -175,10 +165,3 @@ def train_and_evaluate(config: ConfigDict):
     orbax_checkpointer = orbax.checkpoint.PyTreeCheckpointer()
     save_args = orbax_utils.save_args_from_target(ckpt)
     orbax_checkpointer.save('nacaVIT', ckpt, save_args=save_args)
-    #
-    # # model = VisionTransformer(config.vit)
-    # #
-    # # x = jnp.ones([config.batch_size, *config.vit.img_size, 1])
-    # # y = jnp.ones([config.batch_size, *config.vit.img_size, 3])
-    # # model.tabulate({'params': rng_params, 'dropout': rng_dropout}, x, y,
-    # #                train=True)
