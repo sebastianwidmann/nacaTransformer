@@ -15,7 +15,6 @@ import numpy as np
 from tqdm import tqdm
 
 from src.preprocessing.conversion import vtk_to_tfTensor, create_tfExample
-from src.utilities.visualisation import plot_prediction
 from src.utilities.airfoilMNIST import prefilter_dataset
 
 
@@ -35,15 +34,15 @@ def generate_tfds_dataset(config: ConfigDict):
     stl_folder = os.path.join(config.preprocess.readdir, 'stl')
 
     vtu_list = [x for x in sorted(os.listdir(vtu_folder)) if x.endswith('.vtu')]
-    stl_list = [("_".join(x.split("_", 2)[:2]) + ".stl") for x in vtu_list]
-
     vtu_list = prefilter_dataset(vtu_list, aoa_limits=config.preprocess.aoa,
                                  mach_limits=config.preprocess.mach)
+
+    stl_list = [("_".join(x.split("_", 2)[:2]) + ".stl") for x in vtu_list]
 
     dataset = list(zip(vtu_list, stl_list))
 
     ds_train = [dataset.pop(random.randrange(len(dataset))) for _ in
-                range(int(config.train_size * len(dataset)))]
+                range(int(config.preprocess.train_split * len(dataset)))]
     ds_test = dataset
 
     train_quotient, train_remainder = divmod(len(ds_train),
