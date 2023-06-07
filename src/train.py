@@ -20,7 +20,8 @@ from typing import Any, Tuple
 from src.transformer.input_pipeline import get_data_from_tfds
 from src.transformer.network import VisionTransformer
 from src.utilities.schedulers import load_learning_rate_scheduler
-from src.utilities.visualisation import plot_prediction, plot_delta, plot_loss
+from src.utilities.visualisation import plot_predictions, plot_delta, \
+    plot_loss, plot_fields
 
 PRNGKey = Any
 
@@ -138,16 +139,14 @@ def train_and_evaluate(config: ConfigDict):
                     epoch, train_loss, test_loss))
 
             if epoch % config.output_frequency == 0:
-                plot_prediction(config, preds[0, :, :, 0],
-                                test_batch['decoder'][0, :, :, 0], epoch, 0)
-                plot_prediction(config, preds[0, :, :, 1],
-                                test_batch['decoder'][0, :, :, 1], epoch, 1)
-                plot_prediction(config, preds[0, :, :, 2],
-                                test_batch['decoder'][0, :, :, 2], epoch, 2)
+                plot_predictions(config, preds[0, :, :, ],
+                                 test_batch['decoder'][0, :, :], epoch)
 
             if epoch == config.num_epochs:
                 plot_delta(config, preds[0, :, :, ], test_batch['decoder'][0,
                                                      :, :, ], epoch, 'cividis')
+                plot_fields(config, preds[0, :, :, ], test_batch['decoder'][0,
+                                                      :, :, ], epoch)
 
     # Data analysis plots
     try:
