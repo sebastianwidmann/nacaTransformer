@@ -7,10 +7,13 @@ def get_config():
     config.trainer = 'train'
     config.shuffle_buffer_size = 100
     config.batch_size = 55
-    config.num_epochs = 25
+    config.num_epochs = 500
     config.learning_rate_scheduler = "sgdr"
+    config.learning_rate_end_value = 2.5e-5
+    config.warmup_fraction = 0.1
+    config.sgdr_restarts = 4
     config.weight_decay = 0.0
-    config.output_frequency = 5
+    config.output_frequency = 100
 
     config.vit = ml_collections.ConfigDict()
     config.vit.img_size = (200, 200)

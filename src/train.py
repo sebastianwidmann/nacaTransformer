@@ -100,9 +100,8 @@ def train_and_evaluate(config: ConfigDict):
 
     # Create learning rate scheduler
     lr_scheduler = load_learning_rate_scheduler(
-        name=config.learning_rate_scheduler,
-        total_steps=total_steps,
-    )
+        config=config, name=config.learning_rate_scheduler,
+        total_steps=total_steps)
 
     # Create TrainState
     state = create_train_state(config, lr_scheduler, rng_params)
