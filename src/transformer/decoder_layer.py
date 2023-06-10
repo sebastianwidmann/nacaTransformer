@@ -6,6 +6,7 @@
 # ---------------------------------------------------------------------------
 
 from flax import linen as nn
+import jax.numpy as jnp
 
 from src.transformer.layers import MultiLayerPerceptron
 
@@ -57,8 +58,8 @@ class DecoderLayer(nn.Module):
         x = nn.MultiHeadDotProductAttention(
             num_heads=self.num_heads,
             dropout_rate=self.att_dropout_rate,
-            # )(x, x, mask=nn.make_causal_mask(x), deterministic=deterministic)
-        )(x, x, deterministic=deterministic)
+        )(x, x, mask=nn.make_causal_mask(jnp.ones(x.shape[1])),
+          deterministic=deterministic)
 
         x = x + input_decoder
 
