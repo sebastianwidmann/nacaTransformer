@@ -1,0 +1,10 @@
+FROM nacavit-base:latest
+
+# set working directory
+WORKDIR /nacaTransformer
+
+# copy contents from src to workdir
+COPY src/ ./src
+
+# execute container
+CMD ["python3", "-m", "src.main", "--config=src/config.py"]
