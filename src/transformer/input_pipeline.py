@@ -27,9 +27,4 @@ def get_data_from_tfds(*, config, mode):
                   drop_remainder=True,
                   num_parallel_calls=tf.data.AUTOTUNE)
 
-    # # per_host_batch_size = config.batch_size * jax.local_device_count()
-    # # ds = ds.batch(batch_size=per_host_batch_size,
-    # #               drop_remainder=False,
-    # #               num_parallel_calls=tf.data.AUTOTUNE)
-
     return ds.prefetch(tf.data.AUTOTUNE)
