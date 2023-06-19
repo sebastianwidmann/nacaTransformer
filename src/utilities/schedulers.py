@@ -4,7 +4,7 @@ import numpy as np
 
 def load_learning_rate_scheduler(config, name, total_steps):
     if name == 'constant':
-        return 0.0003
+        return config.learning_rate_end_value
     elif name == "warmup_cosine_decay":
         return optax.warmup_cosine_decay_schedule(
             init_value=1e-4, peak_value=3e-4,
