@@ -57,10 +57,6 @@ class EncoderLayer(nn.Module):
             dropout_rate=self.att_dropout_rate,
         )(x, x, deterministic=deterministic)
 
-        x = nn.Dropout(
-            rate=self.dropout_rate,
-        )(x, deterministic=deterministic)
-
         x = x + input_encoder
 
         # Block 2: Norm, Multilayer Perceptron, Add
