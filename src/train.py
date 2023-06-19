@@ -26,7 +26,6 @@ from src.utilities.visualisation import plot_predictions, plot_delta, \
 PRNGKey = Any
 
 
-# @functools.partial(jax.pmap, static_broadcasted_argnums=0)
 def create_train_state(config: ConfigDict, lr_scheduler, rng: PRNGKey) -> \
         train_state.TrainState:
     # Create model instance
@@ -47,7 +46,6 @@ def create_train_state(config: ConfigDict, lr_scheduler, rng: PRNGKey) -> \
 
 
 @jax.jit
-# @functools.partial(jax.pmap, axis_name='ensemble')
 def train_step(state: train_state.TrainState, batch: jnp.ndarray,
                rng: PRNGKey) -> Tuple[train_state.TrainState, Any]:
     # Generate new dropout key for each step
@@ -72,7 +70,6 @@ def train_step(state: train_state.TrainState, batch: jnp.ndarray,
 
 
 @jax.jit
-# @jax.pmap
 def test_step(state: train_state.TrainState, batch: jnp.ndarray):
     preds = state.apply_fn({'params': state.params},
                            batch['encoder'], batch['decoder'],
@@ -105,19 +102,12 @@ def train_and_evaluate(config: ConfigDict):
 
     # Create TrainState
     state = create_train_state(config, lr_scheduler, rng_params)
-    # state = create_train_state(config, jax.random.split(rng_params,
-    #                                                     jax.device_count()))
 
     train_metrics, test_metrics, train_log, test_log = [], [], [], []
 
     logging.info("Starting training loop. Initial compile might take a while.")
-
     for step, batch in enumerate(tfds.as_numpy(ds_train)):
         state, train_loss = train_step(state, batch, rng_dropout)
-        # state, train_loss = pad_shard_unpad(train_step)(state,
-        #                                                 batch,
-        #                                                 rng_dropout,
-        #                                                 min_device_batch=config.batch_size)
         train_log.append(train_loss)
 
         if (step + 1) % int(steps_per_epoch) == 0 and step != 0:
@@ -134,8 +124,12 @@ def train_and_evaluate(config: ConfigDict):
             test_metrics.append(test_loss)
 
             logging.info(
-                'Epoch {}: Train_loss = {:.6f}, Test_loss = {:.6f}'.format(
+                'Epoch {}: Train_loss = {}, Test_loss = {}'.format(
                     epoch, train_loss, test_loss))
+
+            # Reset epoch losses
+            train_log.clear()
+            test_log.clear()
 
             if epoch % config.output_frequency == 0:
                 plot_predictions(config, preds[0, :, :, ],
