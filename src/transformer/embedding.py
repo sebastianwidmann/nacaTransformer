@@ -60,7 +60,7 @@ class PositionEmbedding(nn.Module):
 
         Parameters
         ----------
-        x: jnp.ndarraytwit
+        x: jnp.ndarray
             Patch embedding layer.
 
         Returns
