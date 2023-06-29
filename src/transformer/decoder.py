@@ -74,10 +74,12 @@ class Decoder(nn.Module):
 
         x = nn.Dropout(rate=self.dropout_rate)(x, deterministic=not train)
 
+        num_patches = int(self.img_size[0] / self.patches[0])
         for lyr in range(self.num_layers):
             x = DecoderLayer(
                 num_heads=self.num_heads,
                 hidden_size=self.hidden_size,
+                num_patches=num_patches,
                 dim_mlp=self.dim_mlp,
                 dropout_rate=self.dropout_rate,
                 att_dropout_rate=self.att_dropout_rate,
@@ -86,9 +88,10 @@ class Decoder(nn.Module):
 
         x = nn.LayerNorm()(x)
 
-        # Deconvolute VIT output to original data shape
-        num_patches = int(self.img_size[0] / self.patches[0])
+        # Reshape patched image from 1D to 2D
         x = x.reshape(-1, num_patches, num_patches, self.hidden_size)
+
+        # Deconvolute VIT output to original data shape
         x = nn.ConvTranspose(
             features=num_channels,
             kernel_size=self.patches,
