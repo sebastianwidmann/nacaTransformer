@@ -14,7 +14,7 @@ def get_config():
     config.sgdr_restarts = config.num_epochs / 50
     config.warmup_fraction = 0.1
     config.weight_decay = 0.1
-    config.output_frequency = 1
+    config.output_frequency = 25
 
     config.vit = ml_collections.ConfigDict()
     config.vit.img_size = (200, 200)
