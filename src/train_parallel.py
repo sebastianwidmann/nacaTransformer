@@ -141,6 +141,10 @@ def train_and_evaluate(config: ConfigDict):
                 'Epoch {}: Train_loss = {}, Test_loss = {}'.format(
                     epoch, train_loss, test_loss))
 
+            # Reset epoch losses
+            train_log.clear()
+            test_log.clear()
+
             # summary_writer.scalar('train_loss', train_loss, epoch)
             # summary_writer.scalar('test_loss', tess_loss, epoch)
 
@@ -167,10 +171,12 @@ def train_and_evaluate(config: ConfigDict):
     # save raw loss data into txt-file
     raw_loss = np.concatenate((train_metrics, test_metrics))
     raw_loss = raw_loss.reshape(2, -1).transpose()
-    np.savetxt('loss_raw.txt', raw_loss, delimiter=',')
+    np.savetxt('{}/loss_raw.txt'.format(config.output_dir), raw_loss,
+               delimiter=',')
 
     # Save model
     ckpt = {'model': state}
     orbax_checkpointer = orbax.checkpoint.PyTreeCheckpointer()
     save_args = orbax_utils.save_args_from_target(ckpt)
-    orbax_checkpointer.save('nacaVIT', ckpt, save_args=save_args)
+    orbax_checkpointer.save('{}/nacaVIT'.format(config.output_dir), ckpt,
+                            save_args=save_args)
