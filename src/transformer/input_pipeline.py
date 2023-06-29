@@ -13,7 +13,6 @@ def get_data_from_tfds(*, config, mode):
 
     ds = builder.as_dataset(
         split=tfds.split_for_jax_process(mode),
-        shuffle_files=True,
     )
 
     if mode == 'train':
