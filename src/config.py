@@ -24,7 +24,7 @@ def get_config():
     config.vit.num_heads = 3
     config.vit.dim_mlp = 4 * config.vit.hidden_size
     config.vit.dropout_rate = 0.0
-    config.vit.att_dropout_rate = 0.1
+    config.vit.att_dropout_rate = 0.0
 
     config.preprocess = ml_collections.ConfigDict()
     config.preprocess.readdir = ''  # Specify read dir to generate dataset
