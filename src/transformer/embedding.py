@@ -14,13 +14,13 @@ class PatchEmbedding(nn.Module):
 
     Attributes
     ----------
-    patches: tuple
-        number of patches (x_patches, y_patches)
+    patch_size: tuple
+        number of pixels per patch dimension
     hidden_size: int
         number of features in PatchEmbedding
     """
 
-    patches: int
+    patch_size: int
     hidden_size: int
 
     @nn.compact
@@ -41,8 +41,8 @@ class PatchEmbedding(nn.Module):
 
         x = nn.Conv(
             features=self.hidden_size,
-            kernel_size=self.patches,
-            strides=self.patches,
+            kernel_size=self.patch_size,
+            strides=self.patch_size,
             padding='SAME',
         )(x)
 

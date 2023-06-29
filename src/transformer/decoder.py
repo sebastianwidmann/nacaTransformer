@@ -18,8 +18,8 @@ class Decoder(nn.Module):
     ----------
     img_size: tuple
         number of pixels per dimension of image (x, y)
-    patches: tuple
-        number of patches per dimension of image (x, y)
+    patch_size: tuple
+        number of pixels per patch dimension
     hidden_size: int
         dimensionality of embeddings
     num_layers: int
@@ -35,7 +35,7 @@ class Decoder(nn.Module):
     """
 
     img_size: tuple
-    patches: tuple
+    patch_size: tuple
     hidden_size: int
     num_layers: int
     num_heads: int
@@ -65,7 +65,7 @@ class Decoder(nn.Module):
         num_channels = x.shape[-1]
 
         x = PatchEmbedding(
-            self.patches,
+            self.patch_size,
             self.hidden_size,
             name='PatchEmbedding'
         )(x)
@@ -74,7 +74,7 @@ class Decoder(nn.Module):
 
         x = nn.Dropout(rate=self.dropout_rate)(x, deterministic=not train)
 
-        num_patches = int(self.img_size[0] / self.patches[0])
+        num_patches = int(self.img_size[0] / self.patch_size[0])
         for lyr in range(self.num_layers):
             x = DecoderLayer(
                 num_heads=self.num_heads,
@@ -94,8 +94,8 @@ class Decoder(nn.Module):
         # Deconvolute VIT output to original data shape
         x = nn.ConvTranspose(
             features=num_channels,
-            kernel_size=self.patches,
-            strides=self.patches,
+            kernel_size=self.patch_size,
+            strides=self.patch_size,
         )(x)
 
         return x

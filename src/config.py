@@ -11,15 +11,15 @@ def get_config():
     config.shuffle_buffer_size = 1024
     config.learning_rate_scheduler = "sgdr"
     config.learning_rate_end_value = 1e-5
-    config.sgdr_restarts = config.num_epochs / 50
+    config.sgdr_restarts = int(config.num_epochs / 50)
     config.warmup_fraction = 0.1
     config.weight_decay = 0.1
     config.output_frequency = 25
 
     config.vit = ml_collections.ConfigDict()
     config.vit.img_size = (200, 200)
-    config.vit.patches = (10, 10)  # THIS IS THE PATCH SIZE NOT # OF PATCHES
-    config.vit.hidden_size = 300  # num_patches^2 * num_channels
+    config.vit.patch_size = (10, 10)  # num_patches = (img_size / patch_size)
+    config.vit.hidden_size = 300  # patch_size^2 * num_channels
     config.vit.num_layers = 3
     config.vit.num_heads = 3
     config.vit.dim_mlp = 4 * config.vit.hidden_size

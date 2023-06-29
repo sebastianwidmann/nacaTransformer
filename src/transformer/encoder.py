@@ -18,8 +18,8 @@ class Encoder(nn.Module):
     ----------
     img_size: tuple
         number of pixels per dimension of image (x, y)
-    patches: tuple
-        number of patches per dimension of image (x, y)
+    patch_size: tuple
+        number of pixels per patch dimension
     hidden_size: int
         dimensionality of embeddings
     num_layers: int
@@ -35,7 +35,7 @@ class Encoder(nn.Module):
     """
 
     img_size: tuple
-    patches: tuple
+    patch_size: tuple
     hidden_size: int
     num_layers: int
     num_heads: int
@@ -61,7 +61,7 @@ class Encoder(nn.Module):
         """
 
         x = PatchEmbedding(
-            self.patches,
+            self.patch_size,
             self.hidden_size,
             name='PatchEmbedding'
         )(x)
