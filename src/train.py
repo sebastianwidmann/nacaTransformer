@@ -58,7 +58,7 @@ def train_step(state: train_state.TrainState, batch: jnp.ndarray,
                                rngs={'dropout': rng_dropout},
                                )
 
-        loss = optax.squared_error(preds, batch['decoder']).mean()
+        loss = optax.huber_loss(preds, batch['decoder']).mean()
 
         return loss, preds
 
@@ -76,9 +76,12 @@ def test_step(state: train_state.TrainState, batch: jnp.ndarray):
                            train=False,
                            )
 
-    loss = optax.squared_error(preds, batch['decoder']).mean()
+    loss = optax.huber_loss(preds, batch['decoder']).mean()
 
-    return preds, loss
+    mae = jnp.absolute(batch['decoder'] - preds).mean()
+    rmse = jnp.sqrt(optax.squared_error(preds, batch['decoder']).mean())
+
+    return preds, loss, mae, rmse
 
 
 def train_and_evaluate(config: ConfigDict):
@@ -103,7 +106,8 @@ def train_and_evaluate(config: ConfigDict):
     # Create TrainState
     state = create_train_state(config, lr_scheduler, rng_params)
 
-    train_metrics, test_metrics, train_log, test_log = [], [], [], []
+    train_metrics, test_metrics, mae_metrics, rmse_metrics = [], [], [], []
+    train_log, test_log, mae_log, rmse_log = [], [], [], []
 
     logging.info("Starting training loop. Initial compile might take a while.")
     for step, batch in enumerate(tfds.as_numpy(ds_train)):
@@ -114,32 +118,35 @@ def train_and_evaluate(config: ConfigDict):
             epoch = int((step + 1) / int(steps_per_epoch))
 
             for test_batch in tfds.as_numpy(ds_test):
-                preds, test_loss = test_step(state, test_batch)
+                preds, test_loss, mae, rmse = test_step(state, test_batch)
                 test_log.append(test_loss)
+                mae_log.append(mae)
+                rmse_log.append(rmse)
 
             train_loss = np.mean(train_log)
             test_loss = np.mean(test_log)
 
             train_metrics.append(train_loss)
             test_metrics.append(test_loss)
+            mae_metrics.append(np.mean(mae_log))
+            rmse_metrics.append(np.mean(rmse_log))
 
             logging.info(
-                'Epoch {}: Train_loss = {}, Test_loss = {}'.format(
-                    epoch, train_loss, test_loss))
+                'Epoch {}: Train_loss = {}, Test_loss = {}'.format(epoch,
+                                                                   train_loss,
+                                                                   test_loss))
 
             # Reset epoch losses
             train_log.clear()
             test_log.clear()
+            mae_log.clear()
+            rmse_log.clear()
 
             if epoch % config.output_frequency == 0:
-                plot_predictions(config, preds[0, :, :, ],
-                                 test_batch['decoder'][0, :, :], epoch)
-
-            if epoch == config.num_epochs:
-                plot_delta(config, preds[0, :, :, ], test_batch['decoder'][0,
-                                                     :, :, ], epoch, 'cividis')
-                plot_fields(config, preds[0, :, :, ], test_batch['decoder'][0,
-                                                      :, :, ], epoch)
+                for i in np.random.randint(0, config.batch_size, 5):
+                    y, y_hat = test_batch['decoder'][i, :, :], preds[i, :, :, ]
+                    plot_delta(config, y_hat, y, epoch, i)
+                    plot_fields(config, y_hat, y, epoch, i)
 
     # Data analysis plots
     try:
@@ -148,12 +155,15 @@ def train_and_evaluate(config: ConfigDict):
         pass
 
     # save raw loss data into txt-file
-    raw_loss = np.concatenate((train_metrics, test_metrics))
-    raw_loss = raw_loss.reshape(2, -1).transpose()
-    np.savetxt('loss_raw.txt', raw_loss, delimiter=',')
+    raw_loss = np.concatenate(
+        (train_metrics, test_metrics, mae_metrics, rmse_metrics))
+    raw_loss = raw_loss.reshape(4, -1).transpose()
+    np.savetxt('{}/loss_raw.txt'.format(config.output_dir), raw_loss,
+               delimiter=',')
 
     # Save model
     ckpt = {'model': state}
     orbax_checkpointer = orbax.checkpoint.PyTreeCheckpointer()
     save_args = orbax_utils.save_args_from_target(ckpt)
-    orbax_checkpointer.save('nacaVIT', ckpt, save_args=save_args)
+    orbax_checkpointer.save('{}/nacaVIT'.format(config.output_dir), ckpt,
+                            save_args=save_args)
