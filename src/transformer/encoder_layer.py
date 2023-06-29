@@ -30,7 +30,7 @@ class EncoderLayer(nn.Module):
     num_heads: int
     hidden_size: int
     dim_mlp: int
-    dropout_rate: float = 0.1
+    dropout_rate: float = 0.0
     att_dropout_rate: float = 0.1
 
     @nn.compact
@@ -49,7 +49,7 @@ class EncoderLayer(nn.Module):
             Output of encoder layer.
         """
 
-        # Block 1: Norm, Multi-Head Attention, Add
+        # Block 1: Norm, Multi-Head Self-Attention, Add
         x = nn.LayerNorm()(input_encoder)
 
         x = nn.MultiHeadDotProductAttention(
