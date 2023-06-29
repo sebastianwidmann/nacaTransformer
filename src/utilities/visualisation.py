@@ -115,7 +115,7 @@ def plot_predictions(config: ConfigDict, predictions, ground_truth, epoch, idx):
         plt.close()
 
 
-def plot_delta(config, predictions, ground_truth, epoch, i, cmap='cividis'):
+def plot_delta(config, predictions, ground_truth, epoch, idx, cmap='cividis'):
     fig, ax = plt.subplots(ncols=3, nrows=1, figsize=(10, 5))
 
     xmin, xmax, ymin, ymax = config.preprocess.dim
@@ -163,7 +163,7 @@ def plot_delta(config, predictions, ground_truth, epoch, i, cmap='cividis'):
 
     # plt.subplots_adjust(wspace=0.1)
 
-    plt.savefig('{}/vit_delta_{}_{}.png'.format(config.output_dir, epoch, i),
+    plt.savefig('{}/vit_delta_{}_{}.png'.format(config.output_dir, epoch, idx),
                 bbox_inches="tight", dpi=300)
     plt.close()
 
