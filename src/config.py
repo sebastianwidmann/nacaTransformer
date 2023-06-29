@@ -5,7 +5,7 @@ def get_config():
     config = ml_collections.ConfigDict()
     config.dataset = '../nacaTransformer/airfoilMNIST/'
     config.output_dir = '../nacaTransformer/plots'
-    config.trainer = 'train'
+    config.trainer = 'train'  # Alternative 'preprocess' or 'inference'
     config.num_epochs = 200
     config.batch_size = 88
     config.shuffle_buffer_size = 1024
@@ -27,8 +27,8 @@ def get_config():
     config.vit.att_dropout_rate = 0.1
 
     config.preprocess = ml_collections.ConfigDict()
-    config.preprocess.readdir = '/media/sebastianwidmann/nacaFOAM/airfoilMNIST-raw'
-    config.preprocess.writedir = '/media/sebastianwidmann/nacaFOAM/airfoilMNIST/'
+    config.preprocess.readdir = ''  # Specify read dir to generate dataset
+    config.preprocess.writedir = ''  # Specify write dir to generate dataset
     config.preprocess.train_split = 0.8
     config.preprocess.aoa = (-5, 15)
     config.preprocess.mach = (0, 0.6)
