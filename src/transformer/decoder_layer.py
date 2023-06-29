@@ -9,6 +9,7 @@ from flax import linen as nn
 import jax.numpy as jnp
 
 from src.transformer.layers import MultiLayerPerceptron
+from src.utilities.functions import decoder_mask
 
 
 class DecoderLayer(nn.Module):
@@ -20,6 +21,8 @@ class DecoderLayer(nn.Module):
         number of heads in nn.MultiHeadDotProductAttention
     hidden_size: int
         dimensionality of embeddings
+    num_patches: int
+        number of patches per direction
     dim_mlp: int
         dimensionality of multilayer perceptron layer
     dropout_rate: float
@@ -29,8 +32,9 @@ class DecoderLayer(nn.Module):
     """
     num_heads: int
     hidden_size: int
+    num_patches: int
     dim_mlp: int
-    dropout_rate: float = 0.1
+    dropout_rate: float = 0.0
     att_dropout_rate: float = 0.1
 
     @nn.compact
@@ -52,13 +56,15 @@ class DecoderLayer(nn.Module):
             Output of decoder layer.
         """
 
-        # Block 1: Norm, Multi-Head Attention, Add
+        # Block 1: Norm, Multi-Head Self-Attention, Add
         x = nn.LayerNorm()(input_decoder)
 
         x = nn.MultiHeadDotProductAttention(
             num_heads=self.num_heads,
             dropout_rate=self.att_dropout_rate,
-        )(x, x, mask=nn.make_causal_mask(jnp.ones(x.shape[1])),
+            # )(x, x, mask=nn.make_causal_mask(jnp.ones(x.shape[1])),
+            #   deterministic=deterministic)
+        )(x, x, mask=decoder_mask(num_patches=self.num_patches),
           deterministic=deterministic)
 
         x = x + input_decoder
