@@ -210,8 +210,8 @@ def loss_comparison(files, labels, title, hyperparameter):
 
     for j in range(2):
         ax[j].set_yscale('log')
-        ax[j].set_xlim(0, 50)
-        ax[j].set_ylim(1e-5, 1e-2)
+        ax[j].set_xlim(0, 200)
+        ax[j].set_ylim(1e-6, 1e-3)
         ax[j].set_xlabel('Epochs')
 
         # plt.setp(ax[j].get_yticklabels(), visible=False) if j != 0 else None
@@ -221,8 +221,8 @@ def loss_comparison(files, labels, title, hyperparameter):
                    linestyle='--')
 
     ax[0].legend(loc=1, ncols=2, title=title)
-    ax[0].set_ylabel('Train Loss (MSE)')
-    ax[1].set_ylabel('Test Loss (MSE)')
+    ax[0].set_ylabel('Train Loss (Huber $L_\delta$)')
+    ax[1].set_ylabel('Test Loss (Huber $L_\delta$)')
 
     plt.tight_layout()
 
