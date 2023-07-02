@@ -109,6 +109,10 @@ def train_and_evaluate(config: ConfigDict):
     train_metrics, test_metrics, mae_metrics, rmse_metrics = [], [], [], []
     train_log, test_log, mae_log, rmse_log = [], [], [], []
 
+    # Generate index array to plot n samples from the test data
+    rng = np.random.default_rng(0)
+    idx = rng.integers(0, config.batch_size, 10)
+
     logging.info("Starting training loop. Initial compile might take a while.")
     for step, batch in enumerate(tfds.as_numpy(ds_train)):
         state, train_loss = train_step(state, batch, rng_dropout)
@@ -143,7 +147,7 @@ def train_and_evaluate(config: ConfigDict):
             rmse_log.clear()
 
             if epoch % config.output_frequency == 0:
-                for i in np.random.randint(0, config.batch_size, 5):
+                for i in idx:
                     y, y_hat = test_batch['decoder'][i, :, :], preds[i, :, :, ]
                     plot_delta(config, y_hat, y, epoch, i)
                     plot_fields(config, y_hat, y, epoch, i)
