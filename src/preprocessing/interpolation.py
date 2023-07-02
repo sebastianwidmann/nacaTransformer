@@ -80,11 +80,20 @@ def interpolate(config: ConfigDict, source_data: np.ndarray,
     # Delete point coordinates from decoder input
     y = target_data[:, -3:]
 
+    # Define thermodynamic properties of air at ICAO standard atmosphere
+    T0 = 288.15  # [K] Total temperature
+    p0 = 101325  # [Pa] Total pressure
+    gamma = 1.4  # [-] Ratio of specific heats
+    R = 287.058  # [J/(kg*K)] Specific gas constant for dry air
+
+    T = T0 / (1 + 0.5 * (gamma - 1) * mach ** 2)
+    p_inf = p0 * (1 + 0.5 * (gamma - 1) * mach ** 2) ** (-gamma / (gamma - 1))
+    u_inf = mach * np.sqrt(gamma * R * T)
+
     # Normalise pressure by freestream pressure
-    y[:, 0] /= 101325
+    y[:, 0] /= p_inf
 
     # Normalise velocities by freestream velocity
-    u_inf = mach * np.sqrt(1.4 * 287.058 * 288.15)
     y[:, 1] /= u_inf
     y[:, 2] /= u_inf
 
