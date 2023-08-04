@@ -53,8 +53,12 @@ def interpolate(config: ConfigDict, source_data: np.ndarray,
     weights = np.power(np.reciprocal(dist, out=np.zeros_like(dist),
                                      where=dist != 0), p)
 
-    yq = np.einsum('ij,ijk->ik', weights, yb[idx]) / np.sum(
-        weights, axis=1).reshape(xq.shape[0], -1)
+    # set divisor where number is zero to very small number to avoid error
+    divisor = np.where(np.sum(weights, axis=1) == 0, 1e-23, np.sum(weights,
+                                                                   axis=1))
+
+    yq = np.einsum('ij,ijk->ik', weights, yb[idx]) / divisor.reshape(
+        xq.shape[0], -1)
 
     target_data = np.concatenate((xq, yq), axis=1)
 
@@ -78,24 +82,30 @@ def interpolate(config: ConfigDict, source_data: np.ndarray,
     x = mach_data
 
     # Delete point coordinates from decoder input
-    y = target_data[:, -3:]
+    y = target_data[:, -9:]
 
-    # Define thermodynamic properties of air at ICAO standard atmosphere
-    T0 = 288.15  # [K] Total temperature
-    p0 = 101325  # [Pa] Total pressure
-    gamma = 1.4  # [-] Ratio of specific heats
-    R = 287.058  # [J/(kg*K)] Specific gas constant for dry air
+    ## Uncomment lines 88-108 for incompressible and remove line 85.
+    # y = target_data[:, -3:]
 
-    T = T0 / (1 + 0.5 * (gamma - 1) * mach ** 2)
-    p_inf = p0 * (1 + 0.5 * (gamma - 1) * mach ** 2) ** (-gamma / (gamma - 1))
-    u_inf = mach * np.sqrt(gamma * R * T)
-
-    # Normalise pressure by freestream pressure
-    y[:, 0] /= p_inf
-
-    # Normalise velocities by freestream velocity
-    y[:, 1] /= u_inf
-    y[:, 2] /= u_inf
+    # # Define thermodynamic properties of air at ICAO standard atmosphere
+    # T0 = 288.15  # [K] Total temperature
+    # p0 = 101325  # [Pa] Total pressure
+    # gamma = 1.4  # [-] Ratio of specific heats
+    # R = 287.058  # [J/(kg*K)] Specific gas constant for dry air
+    #
+    # # M = config.preprocess.mach[1]
+    # M = mach
+    #
+    # T = T0 / (1 + 0.5 * (gamma - 1) * M ** 2)
+    # p_inf = p0 * (1 + 0.5 * (gamma - 1) * M ** 2) ** (-gamma / (gamma - 1))
+    # u_inf = M * np.sqrt(gamma * R * T)
+    #
+    # # Normalise pressure by freestream pressure
+    # y[:, 0] /= p_inf
+    #
+    # # Normalise velocities by freestream velocity
+    # y[:, 1] /= u_inf
+    # y[:, 2] /= u_inf
 
     return x, y
 
