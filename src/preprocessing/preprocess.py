@@ -77,16 +77,15 @@ def generate_tfds_dataset(config: ConfigDict):
                 # split string to extract information about airfoil, angle of
                 # attack and Mach number to write as feature into tfrecord
                 sim_config = sample[0].rsplit('.', 1)[0]
-                sim_config = sim_config.split('_')
 
-                airfoil, angle, mach = sim_config
+                airfoil, angle, mach = sim_config.split('_')
                 angle, mach = float(angle), float(mach)
 
                 vtu_dir = os.path.join(vtu_folder, sample[0])
                 stl_dir = os.path.join(stl_folder, sample[1])
                 try:
                     x, y = vtk_to_tfTensor(config, vtu_dir, stl_dir, mach)
-                    example = create_tfExample(x, y)
+                    example = create_tfExample(x, y, sim_config)
                     writer.write(example.SerializeToString())
 
                     j += 1
@@ -120,9 +119,8 @@ def generate_tfds_dataset(config: ConfigDict):
                 # split string to extract information about airfoil, angle of
                 # attack and Mach number to write as feature into tfrecord
                 sim_config = sample[0].rsplit('.', 1)[0]
-                sim_config = sim_config.split('_')
 
-                airfoil, angle, mach = sim_config
+                airfoil, angle, mach = sim_config.split('_')
                 angle, mach = float(angle), float(mach)
 
                 vtu_dir = os.path.join(vtu_folder, sample[0])
@@ -130,7 +128,7 @@ def generate_tfds_dataset(config: ConfigDict):
 
                 try:
                     x, y = vtk_to_tfTensor(config, vtu_dir, stl_dir, mach)
-                    example = create_tfExample(x, y)
+                    example = create_tfExample(x, y, sim_config)
                     writer.write(example.SerializeToString())
 
                     j += 1
@@ -150,8 +148,13 @@ def generate_tfds_dataset(config: ConfigDict):
             dtype=np.float32,
         ),
         'decoder': tfds.features.Tensor(
-            shape=(*config.vit.img_size, 3),
+            shape=(*config.vit.img_size, 9),
             dtype=np.float32,
+        ),
+        'label': tfds.features.Text(
+            encoder=None,
+            encoder_config=None,
+            doc='Simulation config: airfoil_aoa_mach'
         ),
     })
 
