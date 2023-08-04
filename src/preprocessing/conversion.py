@@ -15,7 +15,7 @@ from vtk.util.numpy_support import vtk_to_numpy
 from src.preprocessing.interpolation import interpolate
 
 
-def create_tfExample(x: np.ndarray, y: np.ndarray):
+def create_tfExample(x: np.ndarray, y: np.ndarray, config: str):
     """ Create example for data sample which will store the necessary
     information about each CFD simulation
 
@@ -24,7 +24,9 @@ def create_tfExample(x: np.ndarray, y: np.ndarray):
     y: np.ndarray
             encoder input
     x: np.ndarray
-            decoder inpu
+            decoder input
+    config: string
+            simulation configuration with airfoil, aoa, mach number
 
     Returns
     -------
@@ -37,6 +39,8 @@ def create_tfExample(x: np.ndarray, y: np.ndarray):
             value=x.flatten())),
         'decoder': tf.train.Feature(float_list=tf.train.FloatList(
             value=y.flatten())),
+        'label': tf.train.Feature(bytes_list=tf.train.BytesList(
+            value=[config.encode()]))
     }
 
     return tf.train.Example(features=tf.train.Features(feature=feature))
@@ -163,9 +167,11 @@ def vtu_to_numpy(vtu_dir: str):
                                  [2, -1], axis=1)  # remove z-coord and Uz
     # and only return single plane of points
 
-    # Only return pressure, velocity Ux, velocity Uy
-    numpy_point_data = np.delete(
-        numpy_point_data, [2, 3, 4, 5, 6, 8], axis=1)
+    ## Uncomment lines 172-174 for incompressible dataset
+
+    # # Only return pressure, velocity Ux, velocity Uy
+    # numpy_point_data = np.delete(
+    #     numpy_point_data, [2, 3, 4, 5, 6, 8], axis=1)
 
     return numpy_point_data
 
