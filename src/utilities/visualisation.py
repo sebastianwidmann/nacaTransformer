@@ -115,7 +115,7 @@ def plot_predictions(config: ConfigDict, predictions, ground_truth, epoch, idx):
         plt.close()
 
 
-def plot_delta(config, predictions, ground_truth, epoch, idx, cmap='cividis'):
+def plot_delta(config, predictions, ground_truth, epoch, idx, cmap='jet'):
     fig, ax = plt.subplots(ncols=3, nrows=1, figsize=(10, 5))
 
     xmin, xmax, ymin, ymax = config.preprocess.dim
@@ -126,31 +126,21 @@ def plot_delta(config, predictions, ground_truth, epoch, idx, cmap='cividis'):
     dux = ground_truth[:, :, 1] - predictions[:, :, 1]
     duy = ground_truth[:, :, 2] - predictions[:, :, 2]
 
-    def normalise(z, lower, upper):
-        return (z - z.min()) / (z.max() - z.min()) * (upper - lower) + lower
-
-    # Normalise deltas to [-1,1]
-    lower_limit, upper_limit = -1, 1
-    dp = normalise(dp, lower_limit, upper_limit)
-    dux = normalise(dux, lower_limit, upper_limit)
-    duy = normalise(duy, lower_limit, upper_limit)
-
     z = [dp, dux, duy]
 
-    labelname = ['$\Delta p\'$', '$\Delta u_x\'$', '$\Delta u_y\'$']
+    labelname = ['$\Delta p$', '$\Delta u_x$', '$\Delta u_y$']
 
     for i in range(3):
         axins = inset_locator.inset_axes(ax[i],
-                                         width="100%", height="5%",
+                                         width="95%", height="5%",
                                          loc='lower center',
                                          borderpad=-3)
 
         im = ax[i].pcolormesh(x, y, z[i],
-                              cmap=cmap, vmin=lower_limit, vmax=upper_limit)
+                              cmap=cmap, vmin=z[i].min(), vmax=z[i].max())
         plt.colorbar(im, cax=axins, orientation='horizontal',
-                     label=labelname[i],
-                     ticks=np.linspace(lower_limit, upper_limit, 5,
-                                       endpoint=True))
+                     label=labelname[i], ticks=np.array([z[i].min(), 0,
+                                                         z[i].max()]))
 
         ax[i].set(adjustable='box', aspect='equal')
         ax[i].set_xticks(np.linspace(config.preprocess.dim[0],
@@ -160,8 +150,6 @@ def plot_delta(config, predictions, ground_truth, epoch, idx, cmap='cividis'):
                                      config.preprocess.dim[3],
                                      5, endpoint=True))
         plt.setp(ax[i].get_yticklabels(), visible=False) if i != 0 else None
-
-    # plt.subplots_adjust(wspace=0.1)
 
     plt.savefig('{}/vit_delta_{}_{}.png'.format(config.output_dir, epoch, idx),
                 bbox_inches="tight", dpi=300)
@@ -220,7 +208,7 @@ def loss_comparison(files, labels, title, hyperparameter):
         ax[j].grid(visible=True, which='minor', color='#ccc',
                    linestyle='--')
 
-    ax[0].legend(loc=1, ncols=2, title=title)
+    # ax[0].legend(loc=1, ncols=2, title=title)
     ax[0].set_ylabel('Train Loss (Huber $L_\delta$)')
     ax[1].set_ylabel('Test Loss (Huber $L_\delta$)')
 
