@@ -78,10 +78,11 @@ def test_step(state: train_state.TrainState, batch: jnp.ndarray):
 
     loss = optax.huber_loss(preds, batch['decoder']).mean()
 
-    mae = jnp.absolute(batch['decoder'] - preds).mean()
-    rmse = jnp.sqrt(optax.squared_error(preds, batch['decoder']).mean())
+    mae = jnp.absolute(batch['decoder'] - preds).mean(axis=(1, 2))
+    mse = jnp.sqrt(
+        optax.squared_error(preds, batch['decoder']).mean(axis=(1, 2)))
 
-    return preds, loss, mae, rmse
+    return preds, loss, mae, mse
 
 
 def train_and_evaluate(config: ConfigDict):
@@ -106,8 +107,8 @@ def train_and_evaluate(config: ConfigDict):
     # Create TrainState
     state = create_train_state(config, lr_scheduler, rng_params)
 
-    train_metrics, test_metrics, mae_metrics, rmse_metrics = [], [], [], []
-    train_log, test_log, mae_log, rmse_log = [], [], [], []
+    train_metrics, test_metrics, mae_metrics, mse_metrics = [], [], [], []
+    train_log, test_log = [], []
 
     # Generate index array to plot n samples from the test data
     rng = np.random.default_rng(0)
@@ -122,29 +123,31 @@ def train_and_evaluate(config: ConfigDict):
             epoch = int((step + 1) / int(steps_per_epoch))
 
             for test_batch in tfds.as_numpy(ds_test):
-                preds, test_loss, mae, rmse = test_step(state, test_batch)
+                preds, test_loss, mae, mse = test_step(state, test_batch)
                 test_log.append(test_loss)
-                mae_log.append(mae)
-                rmse_log.append(rmse)
+
+                if epoch % config.output_frequency == 0:
+                    with open('{}/loss_mae.txt'.format(config.output_dir),
+                              'a') as file_mae:
+                        np.savetxt(file_mae, mae, delimiter=',')
+
+                    with open('{}/loss_mse.txt'.format(config.output_dir),
+                              'a') as file_mse:
+                        np.savetxt(file_mse, mse, delimiter=',')
 
             train_loss = np.mean(train_log)
             test_loss = np.mean(test_log)
 
             train_metrics.append(train_loss)
             test_metrics.append(test_loss)
-            mae_metrics.append(np.mean(mae_log))
-            rmse_metrics.append(np.mean(rmse_log))
 
             logging.info(
                 'Epoch {}: Train_loss = {}, Test_loss = {}'.format(epoch,
                                                                    train_loss,
                                                                    test_loss))
-
             # Reset epoch losses
             train_log.clear()
             test_log.clear()
-            mae_log.clear()
-            rmse_log.clear()
 
             if epoch % config.output_frequency == 0:
                 for i in idx:
@@ -159,9 +162,8 @@ def train_and_evaluate(config: ConfigDict):
         pass
 
     # save raw loss data into txt-file
-    raw_loss = np.concatenate(
-        (train_metrics, test_metrics, mae_metrics, rmse_metrics))
-    raw_loss = raw_loss.reshape(4, -1).transpose()
+    raw_loss = np.concatenate((train_metrics, test_metrics))
+    raw_loss = raw_loss.reshape(2, -1).transpose()
     np.savetxt('{}/loss_raw.txt'.format(config.output_dir), raw_loss,
                delimiter=',')
 
