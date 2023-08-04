@@ -200,3 +200,132 @@ for i in range(num_channels):
 # #     plt.savefig('out_{}.png'.format(i), dpi=300)
 # #
 # #     plt.close()
+
+#####
+# CODE FOR PLOTTING PATCH EMBEDDING ALGORITHM
+#
+# UNCOMMENT IF NEEDED.
+#####
+
+# import matplotlib.pyplot as plt
+# import matplotlib.transforms as mtransforms
+# import numpy as np
+# import tensorflow as tf
+#
+#
+# def annotate_patches(ax, text, fontsize=6):
+#     ax.text(0.05, 0.95, text, transform=ax.transAxes,
+#             ha="left", va="top", fontsize=fontsize, color="black")
+#
+#
+# def annotate_flat(ax, text, fontsize=6):
+#     ax.text(0.5, -0.5, text, transform=ax.transAxes,
+#             ha="center", va="center", fontsize=fontsize, color="black")
+#
+#
+# num_patches = 5
+# xmin, xmax, ymin, ymax = (-0.75, 1.25, -1, 1)
+# nx, ny = (200, 200)
+# x, y = np.mgrid[xmin:xmax:(nx * 1j), ymin:ymax:(ny * 1j)]
+#
+# patch_size = int(nx / num_patches)
+#
+# patches = []
+# for j in np.flip(np.arange(num_patches), 0):
+#     _ = []
+#     for i in range(num_patches):
+#         _.append('[{},{}]'.format(i, j))
+#     patches.append(_)
+#
+# flattened = []
+# for i in range(num_patches * num_patches):
+#     flattened.append('[{}]'.format(i))
+#
+# fig, axs = plt.subplot_mosaic([['img', patches]], figsize=(10, 5))
+#
+# encoder = np.load(
+#     '../naca0020/encoder.npy')
+# decoder = np.load(
+#     '../naca0020/decoder.npy')
+#
+# ux = decoder[:, :, 1]
+# z_patch = np.expand_dims(ux, axis=(0, 3))
+# x_patch = np.expand_dims(x, axis=(0, 3))
+# y_patch = np.expand_dims(y, axis=(0, 3))
+#
+# z_patch = tf.image.extract_patches(
+#     images=z_patch,
+#     sizes=[1, patch_size, patch_size, 1],
+#     strides=[1, patch_size, patch_size, 1],
+#     rates=[1, 1, 1, 1],
+#     padding="VALID"
+# )
+#
+# x_patch = tf.image.extract_patches(
+#     images=x_patch,
+#     sizes=[1, patch_size, patch_size, 1],
+#     strides=[1, patch_size, patch_size, 1],
+#     rates=[1, 1, 1, 1],
+#     padding="VALID"
+# )
+#
+# y_patch = tf.image.extract_patches(
+#     images=y_patch,
+#     sizes=[1, patch_size, patch_size, 1],
+#     strides=[1, patch_size, patch_size, 1],
+#     rates=[1, 1, 1, 1],
+#     padding="VALID"
+# )
+#
+# vmin, vmax = ux.min(), ux.max()
+#
+# axs['img'].pcolormesh(x, y, ux, vmin=vmin, vmax=vmax)
+#
+# for j in range(num_patches):
+#     for i in range(num_patches):
+#         xx = tf.reshape(x_patch[0][i][j], [patch_size, patch_size]).numpy()
+#         yy = tf.reshape(y_patch[0][i][j], [patch_size, patch_size]).numpy()
+#         z = tf.reshape(z_patch[0][i][j], [patch_size, patch_size]).numpy()
+#
+#         axs['[{},{}]'.format(i, j)].pcolormesh(xx, yy, z, vmin=vmin,
+#                                                vmax=vmax)
+#
+# for i in axs:
+#     if i != 'img':
+#         annotate_patches(axs[i], f'{i}')
+#     axs[i].set_xticks([])
+#     axs[i].set_yticks([])
+#     plt.setp(axs[i].get_xticklabels(), visible=False)
+#     plt.setp(axs[i].get_yticklabels(), visible=False)
+#
+# # fig.tight_layout()
+# plt.savefig('{}/vit_patches.png'.format('../plots'),
+#             bbox_inches="tight", dpi=300)
+#
+# fig, axs = plt.subplots(nrows=1, ncols=num_patches * num_patches,
+#                         figsize=(10, 0.5))
+#
+# k = 0
+# for j in range(num_patches):
+#     for i in range(num_patches):
+#         xx = tf.reshape(x_patch[0][i][j], [patch_size, patch_size]).numpy()
+#         yy = tf.reshape(y_patch[0][i][j], [patch_size, patch_size]).numpy()
+#         z = tf.reshape(z_patch[0][i][j], [patch_size, patch_size]).numpy()
+#
+#         axs[k].pcolormesh(xx, yy, z, vmin=vmin, vmax=vmax)
+#         k += 1
+#
+# flat_labels = []
+# for j in range(num_patches):
+#     for i in range(num_patches):
+#         flat_labels.append('[{},{}]'.format(i, j))
+# for i in range(num_patches * num_patches):
+#     annotate_flat(axs[i], f'{flat_labels[i]}')
+#     axs[i].set_box_aspect(1)
+#     axs[i].set_xticks([])
+#     axs[i].set_yticks([])
+#     plt.setp(axs[i].get_xticklabels(), visible=False)
+#     plt.setp(axs[i].get_yticklabels(), visible=False)
+#
+# plt.savefig('{}/vit_flat.png'.format('../plots'),
+#             bbox_inches="tight", dpi=300)
