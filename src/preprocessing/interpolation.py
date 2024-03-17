@@ -82,30 +82,30 @@ def interpolate(config: ConfigDict, source_data: np.ndarray,
     x = mach_data
 
     # Delete point coordinates from decoder input
-    y = target_data[:, -9:]
+    #y = target_data[:, -9:]
 
     ## Uncomment lines 88-108 for incompressible and remove line 85.
-    # y = target_data[:, -3:]
+    y = target_data[:, -3:]
 
     # # Define thermodynamic properties of air at ICAO standard atmosphere
-    # T0 = 288.15  # [K] Total temperature
-    # p0 = 101325  # [Pa] Total pressure
-    # gamma = 1.4  # [-] Ratio of specific heats
-    # R = 287.058  # [J/(kg*K)] Specific gas constant for dry air
+    T0 = 288.15  # [K] Total temperature
+    p0 = 101325  # [Pa] Total pressure
+    gamma = 1.4  # [-] Ratio of specific heats
+    R = 287.058  # [J/(kg*K)] Specific gas constant for dry air
     #
-    # # M = config.preprocess.mach[1]
-    # M = mach
+    #M = config.preprocess.mach[1]
+    M = mach
     #
-    # T = T0 / (1 + 0.5 * (gamma - 1) * M ** 2)
-    # p_inf = p0 * (1 + 0.5 * (gamma - 1) * M ** 2) ** (-gamma / (gamma - 1))
-    # u_inf = M * np.sqrt(gamma * R * T)
+    T = T0 / (1 + 0.5 * (gamma - 1) * M ** 2)
+    p_inf = p0 * (1 + 0.5 * (gamma - 1) * M ** 2) ** (-gamma / (gamma - 1))
+    u_inf = M * np.sqrt(gamma * R * T)
     #
     # # Normalise pressure by freestream pressure
-    # y[:, 0] /= p_inf
+    y[:, 0] /= p_inf
     #
     # # Normalise velocities by freestream velocity
-    # y[:, 1] /= u_inf
-    # y[:, 2] /= u_inf
+    y[:, 1] /= u_inf
+    y[:, 2] /= u_inf
 
     return x, y
 
