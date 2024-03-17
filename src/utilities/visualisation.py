@@ -10,7 +10,7 @@ from mpl_toolkits.axes_grid1 import inset_locator
 import numpy as np
 
 
-def plot_fields(config: ConfigDict, predictions, ground_truth, epoch, idx):
+def plot_fields(config: ConfigDict, predictions, ground_truth, encoder_input, epoch, idx):
     nrows, ncols = 3, 2
     fig, ax = plt.subplots(nrows, ncols, figsize=(10, 15))
 
@@ -31,9 +31,15 @@ def plot_fields(config: ConfigDict, predictions, ground_truth, epoch, idx):
         im0 = ax[i, 0].pcolormesh(
             x, y, z1, vmin=lower_limit, vmax=upper_limit,
         )
+
         im1 = ax[i, 1].pcolormesh(
             x, y, z2, vmin=lower_limit, vmax=upper_limit,
         )
+
+        if config.visualisation.mask_internal_geometry:
+            geometry_mask = (encoder_input == config.internal_geometry.value)
+            im0.set_array(np.ma.array(z1, mask=geometry_mask))
+            im1.set_array(np.ma.array(z2, mask=geometry_mask))
 
         axins = inset_locator.inset_axes(ax[i, 1],
                                          width="5%", height="100%",
@@ -63,7 +69,7 @@ def plot_fields(config: ConfigDict, predictions, ground_truth, epoch, idx):
                 bbox_inches="tight", dpi=300)
     plt.close()
 
-
+#not used currently
 def plot_predictions(config: ConfigDict, predictions, ground_truth, epoch, idx):
     xmin, xmax, ymin, ymax = config.preprocess.dim
     nx, ny = config.vit.img_size
@@ -86,6 +92,7 @@ def plot_predictions(config: ConfigDict, predictions, ground_truth, epoch, idx):
 
         im0 = ax[0].pcolormesh(
             x, y, z1, vmin=lower_limit, vmax=upper_limit)
+
         im1 = ax[1].pcolormesh(
             x, y, z2, vmin=lower_limit, vmax=upper_limit)
 
@@ -115,7 +122,7 @@ def plot_predictions(config: ConfigDict, predictions, ground_truth, epoch, idx):
         plt.close()
 
 
-def plot_delta(config, predictions, ground_truth, epoch, idx, cmap='jet'):
+def plot_delta(config, predictions, ground_truth, encoder_input,epoch, idx, cmap='jet'):
     fig, ax = plt.subplots(ncols=3, nrows=1, figsize=(10, 5))
 
     xmin, xmax, ymin, ymax = config.preprocess.dim
@@ -141,6 +148,10 @@ def plot_delta(config, predictions, ground_truth, epoch, idx, cmap='jet'):
         plt.colorbar(im, cax=axins, orientation='horizontal',
                      label=labelname[i], ticks=np.array([z[i].min(), 0,
                                                          z[i].max()]))
+
+        if config.visualisation.mask_internal_geometry:
+            geometry_mask = (encoder_input == config.internal_geometry.value)
+            im.set_array(np.ma.array(z[i], mask=geometry_mask))
 
         ax[i].set(adjustable='box', aspect='equal')
         ax[i].set_xticks(np.linspace(config.preprocess.dim[0],
@@ -185,6 +196,75 @@ def plot_loss(config: ConfigDict, train_loss, test_loss):
                 bbox_inches="tight",
                 dpi=300)
     plt.close()
+
+
+def plot_fields_preprocess_comparison(config: ConfigDict, output_dir,predictions, predictions_normalized , ground_truth, encoder_input, epoch, idx):
+    nrows, ncols = 3, 3
+    fig, ax = plt.subplots(nrows, ncols, figsize=(10, 10))
+
+    xmin, xmax, ymin, ymax = config.preprocess.dim
+    nx, ny = config.vit.img_size
+    x, y = np.mgrid[xmin:xmax:(nx * 1j), ymin:ymax:(ny * 1j)]
+
+    labelname = ['$p/p_\infty$', '$u_x/u_\infty$', '$u_y/u_\infty$']
+
+    for i in range(nrows):
+        z1, z2, z3 = predictions[:, :, i], predictions_normalized[:,:,i],ground_truth[:, :, i]
+
+        if i == 0:
+            lower_limit, upper_limit = np.min(z2[np.nonzero(z2)]), np.max(z2)
+        else:
+            lower_limit, upper_limit = np.min(z2), np.max(z2)
+
+        im0 = ax[i, 0].pcolormesh(
+            x, y, z1, vmin=lower_limit, vmax=upper_limit,
+        )
+
+        im1 = ax[i, 1].pcolormesh(
+            x, y, z2, vmin=lower_limit, vmax=upper_limit,
+        )
+
+        im2 = ax[i, 2].pcolormesh(
+            x, y, z3, vmin=lower_limit, vmax=upper_limit,
+        )
+
+        if config.visualisation.mask_internal_geometry:
+            geometry_mask = (encoder_input == config.internal_geometry.value)
+            im0.set_array(np.ma.array(z1, mask=geometry_mask))
+            im1.set_array(np.ma.array(z2, mask=geometry_mask))
+            im2.set_array(np.ma.array(z3, mask=geometry_mask))
+
+        axins = inset_locator.inset_axes(ax[i, 2],
+                                         width="5%", height="100%",
+                                         loc='center right',
+                                         borderpad=-2)
+
+        plt.colorbar(im2, cax=axins, label=labelname[i],
+                     ticks=np.linspace(lower_limit, upper_limit, 10,
+                                       endpoint=True))
+
+        for j in range(ncols):
+            ax[i, j].set(adjustable='box', aspect='equal')
+            ax[i, j].set_xticks(np.linspace(config.preprocess.dim[0],
+                                            config.preprocess.dim[1],
+                                            5, endpoint=True))
+            ax[i, j].set_yticks(np.linspace(config.preprocess.dim[2],
+                                            config.preprocess.dim[3],
+                                            5, endpoint=True))
+
+            plt.setp(ax[i, j].get_xticklabels(), visible=False) if i != 2 \
+                else None
+            plt.setp(ax[i, j].get_yticklabels(), visible=False) if j != 0 \
+                else None
+
+    plt.subplots_adjust(hspace=0.1, wspace=0.1)
+    plt.savefig('{}/preprocess_comparison_{}_{}.png'.format(output_dir, epoch, idx),
+                bbox_inches="tight", dpi=300)
+    plt.close()
+
+
+
+
 
 
 def loss_comparison(files, labels, title, hyperparameter):

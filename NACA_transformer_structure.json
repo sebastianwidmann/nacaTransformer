@@ -1,0 +1,334 @@
+{
+    "model": {
+      "params": {
+        "Decoder": {
+          "ConvTranspose_0": {
+            "bias": "*",
+            "kernel": "*"
+                },
+          "Layer0": {
+            "LayerNorm_0": {
+              "bias": "*",
+              "scale": "*"
+                    },
+            "LayerNorm_1": {
+              "bias": "*",
+              "scale": "*"
+                    },
+            "LayerNorm_2": {
+              "bias": "*",
+              "scale": "*"
+                    },
+            "MultiHeadDotProductAttention_0": {
+              "key": {
+                "bias": "*",
+                "kernel": "*"
+                        },
+              "out": {
+                "bias": "*",
+                "kernel": "*"
+                        },
+              "query": {
+                "bias": "*",
+                "kernel": "*"
+                        },
+              "value": {
+                "bias": "*",
+                "kernel": "*"
+                        }
+                    },
+            "MultiHeadDotProductAttention_1": {
+              "key": {
+                "bias": "*",
+                "kernel": "*"
+                        },
+              "out": {
+                "bias": "*",
+                "kernel": "*"
+                        },
+              "query": {
+                "bias": "*",
+                "kernel": "*"
+                        },
+              "value": {
+                "bias": "*",
+                "kernel": "*"
+                        }
+                    },
+            "MultiLayerPerceptron_0": {
+              "Dense_0": {
+                "bias": "*",
+                "kernel": "*"
+                        },
+              "Dense_1": {
+                "bias": "*",
+                "kernel": "*"
+                        }
+                    }
+                },
+          "Layer1": {
+            "LayerNorm_0": {
+              "bias": "*",
+              "scale": "*"
+                    },
+            "LayerNorm_1": {
+              "bias": "*",
+              "scale": "*"
+                    },
+            "LayerNorm_2": {
+              "bias": "*",
+              "scale": "*"
+                    },
+            "MultiHeadDotProductAttention_0": {
+              "key": {
+                "bias": "*",
+                "kernel": "*"
+                        },
+              "out": {
+                "bias": "*",
+                "kernel": "*"
+                        },
+              "query": {
+                "bias": "*",
+                "kernel": "*"
+                        },
+              "value": {
+                "bias": "*",
+                "kernel": "*"
+                        }
+                    },
+            "MultiHeadDotProductAttention_1": {
+              "key": {
+                "bias": "*",
+                "kernel": "*"
+                        },
+              "out": {
+                "bias": "*",
+                "kernel": "*"
+                        },
+              "query": {
+                "bias": "*",
+                "kernel": "*"
+                        },
+              "value": {
+                "bias": "*",
+                "kernel": "*"
+                        }
+                    },
+            "MultiLayerPerceptron_0": {
+              "Dense_0": {
+                "bias": "*",
+                "kernel": "*"
+                        },
+              "Dense_1": {
+                "bias": "*",
+                "kernel": "*"
+                        }
+                    }
+                },
+          "Layer2": {
+            "LayerNorm_0": {
+              "bias": "*",
+              "scale": "*"
+                    },
+            "LayerNorm_1": {
+              "bias": "*",
+              "scale": "*"
+                    },
+            "LayerNorm_2": {
+              "bias": "*",
+              "scale": "*"
+                    },
+            "MultiHeadDotProductAttention_0": {
+              "key": {
+                "bias": "*",
+                "kernel": "*"
+                        },
+              "out": {
+                "bias": "*",
+                "kernel": "*"
+                        },
+              "query": {
+                "bias": "*",
+                "kernel": "*"
+                        },
+              "value": {
+                "bias": "*",
+                "kernel": "*"
+                        }
+                    },
+            "MultiHeadDotProductAttention_1": {
+              "key": {
+                "bias": "*",
+                "kernel": "*"
+                        },
+              "out": {
+                "bias": "*",
+                "kernel": "*"
+                        },
+              "query": {
+                "bias": "*",
+                "kernel": "*"
+                        },
+              "value": {
+                "bias": "*",
+                "kernel": "*"
+                        }
+                    },
+            "MultiLayerPerceptron_0": {
+              "Dense_0": {
+                "bias": "*",
+                "kernel": "*"
+                        },
+              "Dense_1": {
+                "bias": "*",
+                "kernel": "*"
+                        }
+                    }
+                },
+          "LayerNorm_0": {
+            "bias": "*",
+            "scale": "*"
+                },
+          "PatchEmbedding": {
+            "Conv_0": {
+              "bias": "*",
+              "kernel": "*"
+                    }
+                },
+          "PositionEmbedding": {
+            "PositionEmbedding": "*"
+                }
+            },
+        "Encoder": {
+          "Layer0": {
+            "LayerNorm_0": {
+              "bias": "*",
+              "scale": "*"
+                    },
+            "LayerNorm_1": {
+              "bias": "*",
+              "scale": "*"
+                    },
+            "MultiHeadDotProductAttention_0": {
+              "key": {
+                "bias": "*",
+                "kernel": "*"
+                        },
+              "out": {
+                "bias": "*",
+                "kernel": "*"
+                        },
+              "query": {
+                "bias": "*",
+                "kernel": "*"
+                        },
+              "value": {
+                "bias": "*",
+                "kernel": "*"
+                        }
+                    },
+            "MultiLayerPerceptron_0": {
+              "Dense_0": {
+                "bias": "*",
+                "kernel": "*"
+                        },
+              "Dense_1": {
+                "bias": "*",
+                "kernel": "*"
+                        }
+                    }
+                },
+          "Layer1": {
+            "LayerNorm_0": {
+              "bias": "*",
+              "scale": "*"
+                    },
+            "LayerNorm_1": {
+              "bias": "*",
+              "scale": "*"
+                    },
+            "MultiHeadDotProductAttention_0": {
+              "key": {
+                "bias": "*",
+                "kernel": "*"
+                        },
+              "out": {
+                "bias": "*",
+                "kernel": "*"
+                        },
+              "query": {
+                "bias": "*",
+                "kernel": "*"
+                        },
+              "value": {
+                "bias": "*",
+                "kernel": "*"
+                        }
+                    },
+            "MultiLayerPerceptron_0": {
+              "Dense_0": {
+                "bias": "*",
+                "kernel": "*"
+                        },
+              "Dense_1": {
+                "bias": "*",
+                "kernel": "*"
+                        }
+                    }
+                },
+          "Layer2": {
+            "LayerNorm_0": {
+              "bias": "*",
+              "scale": "*"
+                    },
+            "LayerNorm_1": {
+              "bias": "*",
+              "scale": "*"
+                    },
+            "MultiHeadDotProductAttention_0": {
+              "key": {
+                "bias": "*",
+                "kernel": "*"
+                        },
+              "out": {
+                "bias": "*",
+                "kernel": "*"
+                        },
+              "query": {
+                "bias": "*",
+                "kernel": "*"
+                        },
+              "value": {
+                "bias": "*",
+                "kernel": "*"
+                        }
+                    },
+            "MultiLayerPerceptron_0": {
+              "Dense_0": {
+                "bias": "*",
+                "kernel": "*"
+                        },
+              "Dense_1": {
+                "bias": "*",
+                "kernel": "*"
+                        }
+                    }
+                },
+          "LayerNorm_0": {
+            "bias": "*",
+            "scale": "*"
+                },
+          "PatchEmbedding": {
+            "Conv_0": {
+              "bias": "*",
+              "kernel": "*"
+                    }
+                },
+          "PositionEmbedding": {
+            "PositionEmbedding": "*"
+                }
+            }
+        }
+    }
+}

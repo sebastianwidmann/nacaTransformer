@@ -10,12 +10,8 @@ import numpy as np
 
 
 def get_data_from_tfds(*, config, mode):
-    if config.fine_tune.enable:
-        builder = tfds.builder_from_directory(builder_dir=config.fine_tune.dataset)
-    else:
-        builder = tfds.builder_from_directory(builder_dir=config.dataset)
+    builder = tfds.builder_from_directory(builder_dir=config.fine_tune_dataset)
 
-    #that coma multiplies the ds_train by the number of epochs so that the whole steps per epoch thing in training works out 
     ds = builder.as_dataset(
         split=tfds.split_for_jax_process(mode),
     )
@@ -35,7 +31,7 @@ def get_data_from_tfds(*, config, mode):
 
 
 def calculate_mean_std(*, config):
-    builder = tfds.builder_from_directory(builder_dir=config.dataset)
+    builder = tfds.builder_from_directory(builder_dir=config.fine_tune_dataset)
     ds_train = builder.as_dataset(split=tfds.split_for_jax_process('train'))
     ds_test = builder.as_dataset(split=tfds.split_for_jax_process('test'))
 
