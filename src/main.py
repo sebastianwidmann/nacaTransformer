@@ -14,16 +14,19 @@ import os
 import tensorflow as tf
 
 from src.preprocessing.preprocess import generate_tfds_dataset
-from src.train import train_and_evaluate
+from train import train_and_evaluate
+
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # disable INFO and WARNING messages
 os.environ["XLA_PYTHON_CLIENT_MEM_FRACTION"] = "0.85"
+#jax.config.update('jax_array', True)
+#os.environ["JAX_TRACEBACK_FILTERING"] = off
 
 FLAGS = flags.FLAGS
 config_flags.DEFINE_config_file(
     'config',
-    None,
-    'File path to hyperparameter configuration',
+    default='config.py',
+    help_string='/local/disk1/ebeqa/naca_transformer/code/config.py',
     lock_config=True,
 )
 flags.mark_flag_as_required('config')
@@ -47,7 +50,7 @@ def main(argv):
     elif FLAGS.config.trainer == 'inference':
         print('Implement inference')
     else:
-        raise app.UsageError(f'Unknown trainer: {FLAGS.config.trainer}')
+        raise app.UsageError('Unknown trainer: {FLAGS.config.trainer}')
 
 
 if __name__ == '__main__':
