@@ -1,8 +1,8 @@
 import os
 import numpy as np
 import pickle
-from naca_transformer.code.src.utilities.visualisation import plot_fields_preprocess_comparison
-from naca_transformer.code.config import get_config
+from src.utilities.visualisation import plot_fields_preprocess_comparison
+from src.config import get_config
 
 
 #TODO clean up code in this file and maybe make it run from a config file

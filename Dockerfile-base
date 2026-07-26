@@ -1,18 +1,20 @@
-FROM python:3.11
+FROM python:3.11-slim
+
+# install uv
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /usr/local/bin/
 
 # set working directory
 WORKDIR /nacaTransformer
 
-# copy contents from src to workdir
+# copy dependency files and install them into a project-local venv
+COPY pyproject.toml uv.lock ./
+RUN uv sync --locked --no-install-project
+
+# replace the CPU-only jaxlib resolved by uv sync with the CUDA 12 build,
+# pinned to the same jax version as pyproject.toml
+RUN uv pip install "jax[cuda12]==0.4.26"
+
+# copy dataset used to build the training TFRecords
 COPY airfoilMNIST/ ./airfoilMNIST
-COPY requirements.txt ./
 
-# install GPU-version of JAX and FLAX
-RUN pip install --upgrade "jax[cuda12_pip]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
-RUN pip install flax
-RUN pip install optax
-RUN pip install -q clu
-RUN pip install tensorflow-datasets
-RUN pip install -U matplotlib
-
-RUN pip install -r requirements.txt
+ENV PATH="/nacaTransformer/.venv/bin:${PATH}"

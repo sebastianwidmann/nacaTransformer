@@ -13,8 +13,7 @@ import jax
 import os
 import tensorflow as tf
 
-from src.preprocessing.preprocess import generate_tfds_dataset
-from train import train_and_evaluate
+from src.train import train_and_evaluate
 
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # disable INFO and WARNING messages
@@ -44,6 +43,9 @@ def main(argv):
     logging.info('JAX local devices: %r', jax.local_devices())
 
     if FLAGS.config.trainer == 'preprocess':
+        # Imported lazily: preprocessing requires the GPU-only RAPIDS
+        # dependencies (faiss, cudf, cuspatial), see README.
+        from src.preprocessing.preprocess import generate_tfds_dataset
         generate_tfds_dataset(FLAGS.config)
     elif FLAGS.config.trainer == 'train':
         train_and_evaluate(FLAGS.config)
