@@ -1,0 +1,25 @@
+[project]
+name = "naca-transformer"
+version = "0.1.0"
+description = "JAX/Flax Vision Transformer for surrogate modeling of aerodynamic flow fields around NACA airfoils"
+readme = "README.md"
+requires-python = ">=3.11,<3.13"
+
+dependencies = [
+    "absl-py>=2.1",
+    "jax==0.4.26",
+    "jaxlib==0.4.26",
+    "flax==0.8.2",
+    "optax==0.2.2",
+    "orbax-checkpoint==0.5.7",
+    "matplotlib>=3.8",
+    "ml-collections>=0.1.1",
+    "numpy~=1.26.4",
+    "numpy-stl>=3.0.1",
+    "pandas>=2.2",
+    "tensorflow~=2.16.1",
+    "tensorflow-datasets>=4.9",
+    "tensorflow-metadata==1.15.0",
+    "tqdm>=4.65",
+    "vtk>=9.3",
+]
